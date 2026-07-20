@@ -55,7 +55,7 @@
   --border: oklch(1 0 0 / 8%);
   --input: oklch(1 0 0 / 12%);
   --ring: oklch(0.6 0.22 25);
-  --brand-red: #E5202A;
+  --brand-red: #30e520;
 }
 
 .dark {
@@ -64,7 +64,10 @@
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
+  * {
+    border-color: var(--color-border);
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -76,6 +79,7 @@
 @utility grain {
   position: relative;
 }
+
 @utility grain-overlay {
   position: fixed;
   inset: 0;
@@ -87,17 +91,31 @@
 }
 
 @keyframes marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
 }
+
 @utility animate-marquee {
   animation: marquee 40s linear infinite;
 }
 
 @keyframes reveal {
-  from { opacity: 0; transform: translateY(24px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 @utility animate-reveal {
   animation: reveal 0.9s cubic-bezier(0.19, 1, 0.22, 1) both;
 }
@@ -109,6 +127,7 @@
   transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
 }
+
 .scroll-reveal.reveal-visible {
   opacity: 1;
   transform: translateY(0);
@@ -116,9 +135,19 @@
 
 /* Blinking dot for loader and header status */
 @keyframes blink-dot {
-  0%, 100% { opacity: 0.15; transform: scale(0.9); }
-  50% { opacity: 1; transform: scale(1.15); }
+
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.9);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
 }
+
 .animate-blink-dot {
   animation: blink-dot 1.8s ease-in-out infinite;
 }
@@ -135,6 +164,7 @@
   transition: transform 0.8s cubic-bezier(0.76, 0, 0.24, 1), opacity 0.8s ease;
   will-change: transform, opacity;
 }
+
 .preloader-hidden {
   transform: translateY(-100%);
   opacity: 0;
@@ -144,34 +174,36 @@
 /* Curved Overlays for Image Slider/Marquee */
 .curved-mask-top {
   position: absolute;
-  top: -51px;
+  top: -65px;
   left: -10%;
   width: 120%;
-  height: 90px;
+  height: 120px;
   background-color: var(--background);
-  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  border-radius: 100%;
   z-index: 10;
   pointer-events: none;
-}
-.curved-mask-bottom {
-  position: absolute;
-  bottom: -41px;
-  left: -10%;
-  width: 120%;
-  height: 90px;
-  background-color: var(--background);
-  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
-  z-index: 10;
-  pointer-events: none;
-}
-@media (max-width: 768px) {
-  .curved-mask-top {
-    top: -36px;
-    height: 60px;
-  }
-  .curved-mask-bottom {
-    bottom: -26px;
-    height: 60px;
-  }
 }
 
+.curved-mask-bottom {
+  position: absolute;
+  bottom: -55px;
+  left: -10%;
+  width: 120%;
+  height: 120px;
+  background-color: var(--background);
+  border-radius: 100%;
+  z-index: 10;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .curved-mask-top {
+    top: -45px;
+    height: 80px;
+  }
+
+  .curved-mask-bottom {
+    bottom: -35px;
+    height: 80px;
+  }
+}

@@ -16,7 +16,7 @@ export function ReelMarquee() {
       <div className="curved-mask-bottom" />
       
       <div className="relative w-full overflow-hidden py-4"
-        style={{ maskImage: "linear-gradient(90deg, transparent, black 15%, black 85%, transparent)" }}>
+        style={{ maskImage: "linear-gradient(90deg, transparent 0%, black 25%, black 75%, transparent 100%)" }}>
         <div className="flex gap-6 animate-marquee w-max">
           {doubled.map((src, i) => (
             <div key={i} className="relative w-[220px] md:w-[280px] aspect-[4/5] shrink-0 overflow-hidden bg-neutral-900">
