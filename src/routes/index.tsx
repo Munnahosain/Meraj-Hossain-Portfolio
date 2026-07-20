@@ -3,10 +3,12 @@ import { SiteChrome } from "@/components/SiteChrome";
 import { ReelMarquee } from "@/components/ReelMarquee";
 import { Timecode } from "@/components/Timecode";
 import meraj from "@/assets/meraj.jpg";
+import merajPng from "@/assets/meraj.png";
 import reel1 from "@/assets/reel-01.jpg";
 import reel3 from "@/assets/reel-03.jpg";
 import reel5 from "@/assets/reel-05.jpg";
 import reel6 from "@/assets/reel-06.jpg";
+import { ScrollReveal } from "@/components/ScrollReveal";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -56,13 +58,31 @@ function Index() {
           </span>
         </div>
 
-        <h1 className="font-display uppercase leading-[0.85] tracking-tight text-center animate-reveal"
-          style={{ fontSize: "clamp(3.5rem, 14vw, 14rem)" }}>
-          <span className="block bg-gradient-to-b from-white via-white/80 to-white/30 bg-clip-text text-transparent">Meraj</span>
-          <span className="block text-white/90">Hossain</span>
-        </h1>
+        {/* 3D Sandwich Name Container */}
+        <div className="relative flex flex-col items-center justify-center my-6 md:my-10 w-full select-none animate-reveal">
+          {/* Back Layer: Meraj */}
+          <h1 className="font-display uppercase leading-[0.85] tracking-tight text-center relative z-10 pointer-events-none"
+            style={{ fontSize: "clamp(3.5rem, 14vw, 14rem)" }}>
+            <span className="block bg-gradient-to-b from-white via-white/80 to-white/30 bg-clip-text text-transparent">Meraj</span>
+          </h1>
 
-        <div className="mt-16">
+          {/* Middle Layer: Transparent portrait */}
+          <div className="absolute top-[48%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[280px] sm:max-w-[360px] md:max-w-[440px] aspect-square flex items-center justify-center z-20 pointer-events-none">
+            <img 
+              src={merajPng} 
+              alt="Meraj Hossain 3D" 
+              className="h-[125%] md:h-[135%] w-auto object-contain object-center transition-transform duration-500 hover:scale-105" 
+            />
+          </div>
+
+          {/* Front Layer: Hossain */}
+          <h1 className="font-display uppercase leading-[0.85] tracking-tight text-center relative z-30 pointer-events-none mt-[-2.5vw]"
+            style={{ fontSize: "clamp(3.5rem, 14vw, 14rem)" }}>
+            <span className="block text-white/95 drop-shadow-[0_12px_24px_rgba(0,0,0,0.85)]">Hossain</span>
+          </h1>
+        </div>
+
+        <div className="mt-12">
           <ReelMarquee />
         </div>
 
@@ -79,7 +99,7 @@ function Index() {
 
       {/* ABOUT */}
       <section className="relative px-6 md:px-12 py-32 border-t border-white/5">
-        <div className="max-w-7xl mx-auto grid md:grid-cols-12 gap-12 items-start">
+        <ScrollReveal className="max-w-7xl mx-auto grid md:grid-cols-12 gap-12 items-start">
           <div className="md:col-span-4 space-y-6">
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-red)]">
               [ 01 ] About
@@ -106,12 +126,12 @@ function Index() {
               ))}
             </div>
           </div>
-        </div>
+        </ScrollReveal>
       </section>
 
       {/* PROJECTS */}
       <section className="relative px-6 md:px-12 py-32 border-t border-white/5">
-        <div className="max-w-7xl mx-auto">
+        <ScrollReveal className="max-w-7xl mx-auto">
           <div className="flex items-end justify-between mb-16">
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-red)] mb-4">[ 02 ] Selected work</div>
@@ -142,12 +162,12 @@ function Index() {
               </div>
             ))}
           </div>
-        </div>
+        </ScrollReveal>
       </section>
 
       {/* SERVICES */}
       <section className="relative px-6 md:px-12 py-32 border-t border-white/5">
-        <div className="max-w-7xl mx-auto">
+        <ScrollReveal className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-12 gap-12 mb-16">
             <div className="md:col-span-4 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-red)]">
               [ 03 ] What I do
@@ -166,12 +186,12 @@ function Index() {
               </div>
             ))}
           </div>
-        </div>
+        </ScrollReveal>
       </section>
 
       {/* EXPERIENCE */}
       <section className="relative px-6 md:px-12 py-32 border-t border-white/5">
-        <div className="max-w-7xl mx-auto">
+        <ScrollReveal className="max-w-7xl mx-auto">
           <div className="flex items-end justify-between mb-16">
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-red)] mb-4">[ 04 ] Experience</div>
@@ -194,12 +214,12 @@ function Index() {
               </div>
             ))}
           </div>
-        </div>
+        </ScrollReveal>
       </section>
 
       {/* CONTACT */}
       <section className="relative px-6 md:px-12 py-32 border-t border-white/5">
-        <div className="max-w-7xl mx-auto">
+        <ScrollReveal className="max-w-7xl mx-auto">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-red)] mb-8">[ 05 ] Get in touch</div>
           <h2 className="font-display uppercase leading-[0.9] text-6xl md:text-[10rem] mb-16">
             Let's make <br /><span className="text-[var(--brand-red)] italic font-normal" style={{ fontFamily: "serif" }}>something</span> loud.
@@ -229,8 +249,9 @@ function Index() {
               <span className="text-2xl group-hover:translate-x-2 transition-transform">→</span>
             </Link>
           </div>
-        </div>
+        </ScrollReveal>
       </section>
     </SiteChrome>
   );
 }
+

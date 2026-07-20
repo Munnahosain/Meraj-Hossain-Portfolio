@@ -7,10 +7,12 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { Preloader } from "../components/Preloader";
+import Lenis from "lenis";
 
 function NotFoundComponent() {
   return (
@@ -97,8 +99,41 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!isLoaded) {
+      document.body.style.overflow = "hidden";
+      return;
+    }
+
+    document.body.style.overflow = "";
+
+    const lenisInstance = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: "vertical",
+      gestureOrientation: "vertical",
+      smoothWheel: true,
+    });
+
+    let rafId: number;
+    const raf = (time: number) => {
+      lenisInstance.raf(time);
+      rafId = requestAnimationFrame(raf);
+    };
+
+    rafId = requestAnimationFrame(raf);
+
+    return () => {
+      lenisInstance.destroy();
+      cancelAnimationFrame(rafId);
+    };
+  }, [isLoaded]);
+
   return (
     <QueryClientProvider client={queryClient}>
+      {!isLoaded && <Preloader onComplete={() => setIsLoaded(true)} />}
       <Outlet />
     </QueryClientProvider>
   );
