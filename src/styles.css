@@ -55,7 +55,7 @@
   --border: oklch(1 0 0 / 8%);
   --input: oklch(1 0 0 / 12%);
   --ring: oklch(0.6 0.22 25);
-  --brand-red: #30e520;
+  --brand-red: #07a707;
 }
 
 .dark {
@@ -69,7 +69,7 @@
   }
 
   body {
-    background-color: var(--color-background);
+    background-color: #0a0a0a;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -86,73 +86,94 @@
   pointer-events: none;
   z-index: 100;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
-  opacity: 0.08;
+  opacity: 0.14;
   mix-blend-mode: overlay;
 }
 
-@keyframes marquee {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(-50%);
-  }
+@utility grunge-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99;
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.04 0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.35'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.35) 100%);
+  opacity: 0.16;
+  mix-blend-mode: soft-light;
 }
 
+/* ─── Marquee (JS-driven — no CSS animation needed) ─────────── */
+/* The @keyframes marquee is kept so nothing breaks if referenced elsewhere */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
 @utility animate-marquee {
   animation: marquee 40s linear infinite;
 }
 
-@keyframes reveal {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* ─── Hero reveal ────────────────────────────────────────────── */
+@keyframes heroFadeUp {
+  0%   { opacity: 0; transform: translateY(40px); filter: blur(8px); }
+  60%  { filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+@keyframes heroClip {
+  0%   { clip-path: inset(0 100% 0 0); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { clip-path: inset(0 0% 0 0); opacity: 1; }
+}
+@keyframes heroScale {
+  0%   { opacity: 0; transform: scale(0.88); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes heroDot {
+  0%, 100% { transform: scale(0.8); opacity: 0.2; }
+  50%       { transform: scale(1.3); opacity: 1; }
+}
+@keyframes heroLineGrow {
+  0%   { transform: scaleX(0); opacity: 0; }
+  100% { transform: scaleX(1); opacity: 1; }
 }
 
+/* Utility classes for hero */
 @utility animate-reveal {
-  animation: reveal 0.9s cubic-bezier(0.19, 1, 0.22, 1) both;
+  animation: heroFadeUp 1.1s cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+@utility animate-reveal-clip {
+  animation: heroClip 1.2s cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+@utility animate-hero-scale {
+  animation: heroScale 1.4s cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+@utility animate-hero-dot {
+  animation: heroDot 2s ease-in-out infinite;
 }
 
-/* Scroll Reveal CSS Utility */
+/* ─── Scroll Reveal ──────────────────────────────────────────── */
 .scroll-reveal {
   opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(36px);
+  transition:
+    opacity 1.1s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 1.1s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
 }
-
 .scroll-reveal.reveal-visible {
   opacity: 1;
   transform: translateY(0);
 }
 
-/* Blinking dot for loader and header status */
+/* ─── Blinking dot ───────────────────────────────────────────── */
 @keyframes blink-dot {
-
-  0%,
-  100% {
-    opacity: 0.15;
-    transform: scale(0.9);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1.15);
-  }
+  0%, 100% { opacity: 0.15; transform: scale(0.9); }
+  50%       { opacity: 1;    transform: scale(1.15); }
 }
-
 .animate-blink-dot {
   animation: blink-dot 1.8s ease-in-out infinite;
 }
 
-/* Preloader custom styles */
+/* ─── Preloader ──────────────────────────────────────────────── */
 .preloader-overlay {
   position: fixed;
   inset: 0;
@@ -161,17 +182,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.8s cubic-bezier(0.76, 0, 0.24, 1), opacity 0.8s ease;
+  transition: transform 0.9s cubic-bezier(0.76, 0, 0.24, 1), opacity 0.9s ease;
   will-change: transform, opacity;
 }
-
 .preloader-hidden {
   transform: translateY(-100%);
   opacity: 0;
   pointer-events: none;
 }
 
-/* Curved Overlays for Image Slider/Marquee */
+/* ─── Curved overlays for marquee ───────────────────────────── */
 .curved-mask-top {
   position: absolute;
   top: -65px;
@@ -183,7 +203,6 @@
   z-index: 10;
   pointer-events: none;
 }
-
 .curved-mask-bottom {
   position: absolute;
   bottom: -55px;
@@ -197,13 +216,14 @@
 }
 
 @media (max-width: 768px) {
-  .curved-mask-top {
-    top: -45px;
-    height: 80px;
-  }
+  .curved-mask-top    { top:    -45px; height: 80px; }
+  .curved-mask-bottom { bottom: -35px; height: 80px; }
+}
 
-  .curved-mask-bottom {
-    bottom: -35px;
-    height: 80px;
-  }
+/* ─── Smooth global transitions ─────────────────────────────── */
+*,
+*::before,
+*::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

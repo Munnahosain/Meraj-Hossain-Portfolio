@@ -13,7 +13,8 @@ export function ViewfinderFrame() {
         style={{ background: "linear-gradient(180deg, transparent, var(--brand-red) 30%, var(--brand-red) 70%, transparent)", boxShadow: "0 0 60px 8px var(--brand-red)" }} />
       <div className="pointer-events-none fixed inset-y-0 right-0 w-[3px] z-30 opacity-70"
         style={{ background: "linear-gradient(180deg, transparent, var(--brand-red) 30%, var(--brand-red) 70%, transparent)", boxShadow: "0 0 60px 8px var(--brand-red)" }} />
-      {/* Grain */}
+      {/* Grain + grunge texture */}
+      <div className="grunge-overlay" />
       <div className="grain-overlay" />
     </>
   );
