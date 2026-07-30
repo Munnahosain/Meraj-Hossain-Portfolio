@@ -307,11 +307,34 @@
 
 /* ===== Theme overrides & pattern, remove grunge ===== */
 .grunge-overlay { display: none !important; }
-/* subtle patterned background — diagonal micro pattern */
+/* subtle patterned background — removed, use pure black background */
 body {
-  background-color: var(--background);
-  background-image: linear-gradient(135deg, rgba(255,255,255,0.02) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.02) 50%, rgba(255,255,255,0.02) 75%, transparent 75%, transparent);
-  background-size: 28px 28px;
+  background-color: #000; /* solid black background */
+  background-image: none;
+}
+
+/* Ensure SVG icons render and inherit color */
+svg {
+  color: currentColor;
+  fill: currentColor;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Gentle image hover for interactive elements */
+img {
+  transition: transform 360ms cubic-bezier(0.22,1,0.36,1), filter 360ms ease;
+}
+img:hover {
+  transform: translateY(-6px) scale(1.01);
+}
+
+/* Small lift for interactive elements like cards and buttons */
+.button-hover, .card-hover, .hover-lift {
+  transition: transform 280ms cubic-bezier(0.22,1,0.36,1), box-shadow 280ms ease;
+}
+.button-hover:hover, .card-hover:hover, .hover-lift:hover {
+  transform: translateY(-6px);
 }
 /* Replace grain overlay with very subtle texture (kept optional) */
 .grain-overlay { display: none !important; }
