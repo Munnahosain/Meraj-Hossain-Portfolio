@@ -1,20 +1,22 @@
-import bcrypt from 'bcryptjs';
-import { connectDB } from '~/server/utils/db';
-import { User } from '~/server/models/User';
-import { generateToken } from '~/server/utils/jwt';
+import bcrypt from "bcryptjs";
+import { connectDB } from "~/server/utils/db";
+import { User } from "~/server/models/User";
+import { generateToken } from "~/server/utils/jwt";
 
 export default defineEventHandler(async (event) => {
   try {
     await connectDB();
 
     const body = await readBody(event);
-    const email = String(body.email || '').trim().toLowerCase();
-    const password = String(body.password || '');
+    const email = String(body.email || "")
+      .trim()
+      .toLowerCase();
+    const password = String(body.password || "");
 
     if (!email || !password) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Email and password are required',
+        statusMessage: "Email and password are required",
       });
     }
 
@@ -22,7 +24,7 @@ export default defineEventHandler(async (event) => {
     if (!allowedEmail || email !== allowedEmail) {
       throw createError({
         statusCode: 403,
-        statusMessage: 'Access Denied. This email is not authorized to access the admin panel.',
+        statusMessage: "Access Denied. This email is not authorized to access the admin panel.",
       });
     }
 
@@ -31,7 +33,7 @@ export default defineEventHandler(async (event) => {
     if (!user || !user.passwordHash) {
       throw createError({
         statusCode: 401,
-        statusMessage: 'Invalid email or password',
+        statusMessage: "Invalid email or password",
       });
     }
 
@@ -40,13 +42,13 @@ export default defineEventHandler(async (event) => {
     if (!isValidPassword) {
       throw createError({
         statusCode: 401,
-        statusMessage: 'Invalid email or password',
+        statusMessage: "Invalid email or password",
       });
     }
 
     // Fire-and-forget — don't block the login response for a non-critical update
     user.lastLogin = new Date();
-    user.save().catch((e: Error) => console.error('lastLogin save error:', e.message));
+    user.save().catch((e: Error) => console.error("lastLogin save error:", e.message));
 
     const token = generateToken({
       id: user._id.toString(),
@@ -65,10 +67,10 @@ export default defineEventHandler(async (event) => {
     };
   } catch (error) {
     if (error.statusCode) throw error;
-    console.error('Login error:', error);
+    console.error("Login error:", error);
     throw createError({
       statusCode: 500,
-      statusMessage: 'Login failed',
+      statusMessage: "Login failed",
     });
   }
 });

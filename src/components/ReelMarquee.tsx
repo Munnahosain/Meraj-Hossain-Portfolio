@@ -12,32 +12,32 @@ const shots = [reel1, reel2, reel3, reel4, reel5, reel6, reel7];
 const DOUBLED = [...shots, ...shots];
 
 // ── Scroll wheel geometry ─────────────────────────────────────────
-const RIB_WIDTH = 6;       // px per rib groove
-const RIB_COUNT = 200;     // total ribs in the repeating strip
+const RIB_WIDTH = 6; // px per rib groove
+const RIB_COUNT = 200; // total ribs in the repeating strip
 const RIB_STRIP_W = RIB_COUNT * RIB_WIDTH;
-const R_LABEL = 5;         // major tick every N ribs (used for ratio calc)
+const R_LABEL = 5; // major tick every N ribs (used for ratio calc)
 const WHEEL_TICK = RIB_WIDTH; // px per "tick" for ratio math
 
 // ─────────────────────────────────────────────────────────────────
 export function ReelMarquee() {
-  const trackRef     = useRef<HTMLDivElement>(null);   // image strip
-  const rulerRef     = useRef<HTMLDivElement>(null);   // ruler strip
-  const rulerWrapRef = useRef<HTMLDivElement>(null);   // ruler container (for width)
+  const trackRef = useRef<HTMLDivElement>(null); // image strip
+  const rulerRef = useRef<HTMLDivElement>(null); // ruler strip
+  const rulerWrapRef = useRef<HTMLDivElement>(null); // ruler container (for width)
 
   // All physics state lives here (no React re-renders needed)
   const s = useRef({
-    offset:     0,
-    halfWidth:  0,     // carousel wrap threshold
-    rulerRatio: 0.25,  // ruler-px per carousel-px (recalculated on mount)
-    active:     false,
-    src:        "none" as "none" | "img" | "ruler",
-    startX:     0,
-    startOff:   0,
-    vel:        0,
-    lastX:      0,
-    lastT:      0,
-    autoRaf:    0,
-    glideRaf:   0,
+    offset: 0,
+    halfWidth: 0, // carousel wrap threshold
+    rulerRatio: 0.25, // ruler-px per carousel-px (recalculated on mount)
+    active: false,
+    src: "none" as "none" | "img" | "ruler",
+    startX: 0,
+    startOff: 0,
+    vel: 0,
+    lastX: 0,
+    lastT: 0,
+    autoRaf: 0,
+    glideRaf: 0,
   });
 
   // ── Paint DOM ──────────────────────────────────────────────────
@@ -84,42 +84,45 @@ export function ReelMarquee() {
     const st = s.current;
     cancelAnimationFrame(st.autoRaf);
     cancelAnimationFrame(st.glideRaf);
-    st.active   = true;
-    st.src      = src;
-    st.startX   = e.clientX;
+    st.active = true;
+    st.src = src;
+    st.startX = e.clientX;
     st.startOff = st.offset;
-    st.vel      = 0;
-    st.lastX    = e.clientX;
-    st.lastT    = performance.now();
+    st.vel = 0;
+    st.lastX = e.clientX;
+    st.lastT = performance.now();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }, []);
 
   // ── Pointer move ───────────────────────────────────────────────
-  const onMove = useCallback((e: React.PointerEvent) => {
-    const st = s.current;
-    if (!st.active) return;
+  const onMove = useCallback(
+    (e: React.PointerEvent) => {
+      const st = s.current;
+      if (!st.active) return;
 
-    const now = performance.now();
-    const dt  = Math.max(now - st.lastT, 1);
-    const dx  = e.clientX - st.lastX;
-    // rolling velocity in screen-px/frame (at 60 fps)
-    st.vel   = (dx / dt) * 16;
-    st.lastX = e.clientX;
-    st.lastT = now;
+      const now = performance.now();
+      const dt = Math.max(now - st.lastT, 1);
+      const dx = e.clientX - st.lastX;
+      // rolling velocity in screen-px/frame (at 60 fps)
+      st.vel = (dx / dt) * 16;
+      st.lastX = e.clientX;
+      st.lastT = now;
 
-    const drag = e.clientX - st.startX;
+      const drag = e.clientX - st.startX;
 
-    if (st.src === "img") {
-      // Carousel drag: screen px === carousel px (1:1)
-      st.offset = st.startOff - drag;
-    } else {
-      // Ruler drag: ruler px → carousel px via ratio
-      // drag right (positive) → scroll backward (offset decreases)
-      st.offset = st.startOff - drag / st.rulerRatio;
-    }
+      if (st.src === "img") {
+        // Carousel drag: screen px === carousel px (1:1)
+        st.offset = st.startOff - drag;
+      } else {
+        // Ruler drag: ruler px → carousel px via ratio
+        // drag right (positive) → scroll backward (offset decreases)
+        st.offset = st.startOff - drag / st.rulerRatio;
+      }
 
-    draw();
-  }, [draw]);
+      draw();
+    },
+    [draw],
+  );
 
   // ── Pointer up / leave ─────────────────────────────────────────
   const onUp = useCallback(() => {
@@ -127,7 +130,7 @@ export function ReelMarquee() {
     if (!st.active) return;
     const wasRuler = st.src === "ruler";
     st.active = false;
-    st.src    = "none";
+    st.src = "none";
     // Convert ruler velocity → carousel velocity so momentum feels right
     if (wasRuler) st.vel = st.vel / st.rulerRatio;
     st.glideRaf = requestAnimationFrame(glide);
@@ -138,9 +141,9 @@ export function ReelMarquee() {
     const el = trackRef.current;
     if (!el) return;
 
-    const hw = el.scrollWidth / 2;      // one full loop
-    const pi = hw / shots.length;       // px per image slot
-    s.current.halfWidth  = hw;
+    const hw = el.scrollWidth / 2; // one full loop
+    const pi = hw / shots.length; // px per image slot
+    s.current.halfWidth = hw;
     // 1 image = R_LABEL ribs on wheel → ratio = (R_LABEL * WHEEL_TICK) / perImage
     s.current.rulerRatio = (R_LABEL * WHEEL_TICK) / pi;
 
@@ -155,7 +158,6 @@ export function ReelMarquee() {
   // ─────────────────────────────────────────────────────────────
   return (
     <div className="relative w-full select-none">
-
       {/* ── Image strip ─────────────────────────────────────── */}
       <div
         className="relative w-full overflow-hidden py-1"
@@ -188,8 +190,7 @@ export function ReelMarquee() {
                 <div
                   className="absolute inset-0 mix-blend-multiply pointer-events-none"
                   style={{
-                    background:
-                      "linear-gradient(135deg, var(--brand-red) 0%, transparent 70%)",
+                    background: "linear-gradient(135deg, var(--brand-red) 0%, transparent 70%)",
                     opacity: 0.4,
                   }}
                 />
@@ -220,7 +221,8 @@ export function ReelMarquee() {
             width: "min(100%, 640px)",
             height: 56,
             borderRadius: 6,
-            background: "linear-gradient(180deg, #2a6fc4 0%, #3d7fd4 35%, #4a90e2 50%, #3d7fd4 65%, #2a6fc4 100%)",
+            background:
+              "linear-gradient(180deg, #2a6fc4 0%, #3d7fd4 35%, #4a90e2 50%, #3d7fd4 65%, #2a6fc4 100%)",
             boxShadow:
               "inset 0 3px 8px rgba(0,0,0,0.55), inset 0 -2px 4px rgba(255,255,255,0.08), 0 2px 6px rgba(0,0,0,0.4)",
             padding: "6px 12px",
@@ -283,8 +285,7 @@ export function ReelMarquee() {
               className="absolute inset-x-[8%] bottom-0 z-[5] pointer-events-none"
               style={{
                 height: 4,
-                background:
-                  "linear-gradient(180deg, transparent, rgba(0,0,0,0.45))",
+                background: "linear-gradient(180deg, transparent, rgba(0,0,0,0.45))",
                 filter: "blur(2px)",
               }}
             />

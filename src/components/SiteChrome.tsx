@@ -8,7 +8,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background text-foreground relative overflow-x-hidden">
       <ViewfinderFrame />
       <NavBar />
-      <main className="relative z-10 pt-20">{children}</main>
+      <main className="relative z-10 pt-15">{children}</main>
       <Footer />
     </div>
   );

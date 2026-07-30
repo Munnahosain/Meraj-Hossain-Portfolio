@@ -1,7 +1,7 @@
-import { connectDB } from '~/server/utils/db';
-import { User } from '~/server/models/User';
-import { generateToken } from '~/server/utils/jwt';
-import { OAuth2Client } from 'google-auth-library';
+import { connectDB } from "~/server/utils/db";
+import { User } from "~/server/models/User";
+import { generateToken } from "~/server/utils/jwt";
+import { OAuth2Client } from "google-auth-library";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
     if (!clientId || !clientSecret) {
       throw createError({
         statusCode: 500,
-        statusMessage: 'Google OAuth is not configured',
+        statusMessage: "Google OAuth is not configured",
       });
     }
 
@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
     if (!code || !redirectUri) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Missing Google authorization code',
+        statusMessage: "Missing Google authorization code",
       });
     }
 
@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
     if (!tokens.id_token) {
       throw createError({
         statusCode: 401,
-        statusMessage: 'Google did not return an ID token',
+        statusMessage: "Google did not return an ID token",
       });
     }
 
@@ -53,7 +53,7 @@ export default defineEventHandler(async (event) => {
     if (!googleId || !email) {
       throw createError({
         statusCode: 401,
-        statusMessage: 'Google profile is missing required fields',
+        statusMessage: "Google profile is missing required fields",
       });
     }
 
@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
     if (!allowedEmail || email.trim().toLowerCase() !== allowedEmail) {
       throw createError({
         statusCode: 403,
-        statusMessage: 'Access Denied. This email is not authorized to access the admin panel.',
+        statusMessage: "Access Denied. This email is not authorized to access the admin panel.",
       });
     }
 
@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
       user = await User.create({
         googleId,
         email,
-        name: name || email.split('@')[0],
+        name: name || email.split("@")[0],
         picture,
       });
     } else {
@@ -98,13 +98,13 @@ export default defineEventHandler(async (event) => {
       },
     };
   } catch (error) {
-    console.error('Auth error:', error);
+    console.error("Auth error:", error);
     const statusCode = error?.statusCode || 500;
     setResponseStatus(event, statusCode);
 
     return {
       success: false,
-      error: error?.statusMessage || 'Authentication failed',
+      error: error?.statusMessage || "Authentication failed",
     };
   }
 });

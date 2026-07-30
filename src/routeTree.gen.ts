@@ -14,6 +14,36 @@ import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiSkillsRouteImport } from './routes/api/skills'
+import { Route as ApiSettingsRouteImport } from './routes/api/settings'
+import { Route as ApiServicesRouteImport } from './routes/api/services'
+import { Route as ApiProjectsRouteImport } from './routes/api/projects'
+import { Route as ApiMessagesRouteImport } from './routes/api/messages'
+import { Route as ApiMediaRouteImport } from './routes/api/media'
+import { Route as ApiExperienceRouteImport } from './routes/api/experience'
+import { Route as ApiEducationRouteImport } from './routes/api/education'
+import { Route as ApiContactRouteImport } from './routes/api/contact'
+import { Route as AdminLoginRouteImport } from './routes/admin/login'
+import { Route as AdminGoogleCallbackRouteImport } from './routes/admin/google-callback'
+import { Route as AdminLayoutRouteImport } from './routes/admin/_layout'
+import { Route as AdminLayoutIndexRouteImport } from './routes/admin/_layout/index'
+import { Route as ApiProjectsIdRouteImport } from './routes/api/projects/$id'
+import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
+import { Route as ApiAuthCheckRouteImport } from './routes/api/auth/check'
+import { Route as AdminLayoutTestimonialsRouteImport } from './routes/admin/_layout/testimonials'
+import { Route as AdminLayoutSkillsRouteImport } from './routes/admin/_layout/skills'
+import { Route as AdminLayoutSettingsRouteImport } from './routes/admin/_layout/settings'
+import { Route as AdminLayoutServicesRouteImport } from './routes/admin/_layout/services'
+import { Route as AdminLayoutSeoRouteImport } from './routes/admin/_layout/seo'
+import { Route as AdminLayoutSecurityRouteImport } from './routes/admin/_layout/security'
+import { Route as AdminLayoutPortfolioRouteImport } from './routes/admin/_layout/portfolio'
+import { Route as AdminLayoutMessagesRouteImport } from './routes/admin/_layout/messages'
+import { Route as AdminLayoutMediaRouteImport } from './routes/admin/_layout/media'
+import { Route as AdminLayoutExperienceRouteImport } from './routes/admin/_layout/experience'
+import { Route as AdminLayoutEducationRouteImport } from './routes/admin/_layout/education'
+import { Route as AdminLayoutCategoriesRouteImport } from './routes/admin/_layout/categories'
+import { Route as AdminLayoutBackupRouteImport } from './routes/admin/_layout/backup'
+import { Route as AdminLayoutAnalyticsRouteImport } from './routes/admin/_layout/analytics'
 
 const ServicesRoute = ServicesRouteImport.update({
   id: '/services',
@@ -40,6 +70,156 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSkillsRoute = ApiSkillsRouteImport.update({
+  id: '/api/skills',
+  path: '/api/skills',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSettingsRoute = ApiSettingsRouteImport.update({
+  id: '/api/settings',
+  path: '/api/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiServicesRoute = ApiServicesRouteImport.update({
+  id: '/api/services',
+  path: '/api/services',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiProjectsRoute = ApiProjectsRouteImport.update({
+  id: '/api/projects',
+  path: '/api/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMessagesRoute = ApiMessagesRouteImport.update({
+  id: '/api/messages',
+  path: '/api/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMediaRoute = ApiMediaRouteImport.update({
+  id: '/api/media',
+  path: '/api/media',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExperienceRoute = ApiExperienceRouteImport.update({
+  id: '/api/experience',
+  path: '/api/experience',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEducationRoute = ApiEducationRouteImport.update({
+  id: '/api/education',
+  path: '/api/education',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiContactRoute = ApiContactRouteImport.update({
+  id: '/api/contact',
+  path: '/api/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin/login',
+  path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminGoogleCallbackRoute = AdminGoogleCallbackRouteImport.update({
+  id: '/admin/google-callback',
+  path: '/admin/google-callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLayoutRoute = AdminLayoutRouteImport.update({
+  id: '/admin/_layout',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLayoutIndexRoute = AdminLayoutIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminLayoutRoute,
+} as any)
+const ApiProjectsIdRoute = ApiProjectsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiProjectsRoute,
+} as any)
+const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
+  id: '/api/auth/login',
+  path: '/api/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthCheckRoute = ApiAuthCheckRouteImport.update({
+  id: '/api/auth/check',
+  path: '/api/auth/check',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLayoutTestimonialsRoute = AdminLayoutTestimonialsRouteImport.update({
+  id: '/testimonials',
+  path: '/testimonials',
+  getParentRoute: () => AdminLayoutRoute,
+} as any)
+const AdminLayoutSkillsRoute = AdminLayoutSkillsRouteImport.update({
+  id: '/skills',
+  path: '/skills',
+  getParentRoute: () => AdminLayoutRoute,
+} as any)
+const AdminLayoutSettingsRoute = AdminLayoutSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminLayoutRoute,
+} as any)
+const AdminLayoutServicesRoute = AdminLayoutServicesRouteImport.update({
+  id: '/services',
+  path: '/services',
+  getParentRoute: () => AdminLayoutRoute,
+} as any)
+const AdminLayoutSeoRoute = AdminLayoutSeoRouteImport.update({
+  id: '/seo',
+  path: '/seo',
+  getParentRoute: () => AdminLayoutRoute,
+} as any)
+const AdminLayoutSecurityRoute = AdminLayoutSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => AdminLayoutRoute,
+} as any)
+const AdminLayoutPortfolioRoute = AdminLayoutPortfolioRouteImport.update({
+  id: '/portfolio',
+  path: '/portfolio',
+  getParentRoute: () => AdminLayoutRoute,
+} as any)
+const AdminLayoutMessagesRoute = AdminLayoutMessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => AdminLayoutRoute,
+} as any)
+const AdminLayoutMediaRoute = AdminLayoutMediaRouteImport.update({
+  id: '/media',
+  path: '/media',
+  getParentRoute: () => AdminLayoutRoute,
+} as any)
+const AdminLayoutExperienceRoute = AdminLayoutExperienceRouteImport.update({
+  id: '/experience',
+  path: '/experience',
+  getParentRoute: () => AdminLayoutRoute,
+} as any)
+const AdminLayoutEducationRoute = AdminLayoutEducationRouteImport.update({
+  id: '/education',
+  path: '/education',
+  getParentRoute: () => AdminLayoutRoute,
+} as any)
+const AdminLayoutCategoriesRoute = AdminLayoutCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => AdminLayoutRoute,
+} as any)
+const AdminLayoutBackupRoute = AdminLayoutBackupRouteImport.update({
+  id: '/backup',
+  path: '/backup',
+  getParentRoute: () => AdminLayoutRoute,
+} as any)
+const AdminLayoutAnalyticsRoute = AdminLayoutAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AdminLayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +227,36 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/projects': typeof ProjectsRoute
   '/services': typeof ServicesRoute
+  '/admin': typeof AdminLayoutRouteWithChildren
+  '/admin/google-callback': typeof AdminGoogleCallbackRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/api/contact': typeof ApiContactRoute
+  '/api/education': typeof ApiEducationRoute
+  '/api/experience': typeof ApiExperienceRoute
+  '/api/media': typeof ApiMediaRoute
+  '/api/messages': typeof ApiMessagesRoute
+  '/api/projects': typeof ApiProjectsRouteWithChildren
+  '/api/services': typeof ApiServicesRoute
+  '/api/settings': typeof ApiSettingsRoute
+  '/api/skills': typeof ApiSkillsRoute
+  '/admin/analytics': typeof AdminLayoutAnalyticsRoute
+  '/admin/backup': typeof AdminLayoutBackupRoute
+  '/admin/categories': typeof AdminLayoutCategoriesRoute
+  '/admin/education': typeof AdminLayoutEducationRoute
+  '/admin/experience': typeof AdminLayoutExperienceRoute
+  '/admin/media': typeof AdminLayoutMediaRoute
+  '/admin/messages': typeof AdminLayoutMessagesRoute
+  '/admin/portfolio': typeof AdminLayoutPortfolioRoute
+  '/admin/security': typeof AdminLayoutSecurityRoute
+  '/admin/seo': typeof AdminLayoutSeoRoute
+  '/admin/services': typeof AdminLayoutServicesRoute
+  '/admin/settings': typeof AdminLayoutSettingsRoute
+  '/admin/skills': typeof AdminLayoutSkillsRoute
+  '/admin/testimonials': typeof AdminLayoutTestimonialsRoute
+  '/api/auth/check': typeof ApiAuthCheckRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/projects/$id': typeof ApiProjectsIdRoute
+  '/admin/': typeof AdminLayoutIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +264,35 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/projects': typeof ProjectsRoute
   '/services': typeof ServicesRoute
+  '/admin/google-callback': typeof AdminGoogleCallbackRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/api/contact': typeof ApiContactRoute
+  '/api/education': typeof ApiEducationRoute
+  '/api/experience': typeof ApiExperienceRoute
+  '/api/media': typeof ApiMediaRoute
+  '/api/messages': typeof ApiMessagesRoute
+  '/api/projects': typeof ApiProjectsRouteWithChildren
+  '/api/services': typeof ApiServicesRoute
+  '/api/settings': typeof ApiSettingsRoute
+  '/api/skills': typeof ApiSkillsRoute
+  '/admin/analytics': typeof AdminLayoutAnalyticsRoute
+  '/admin/backup': typeof AdminLayoutBackupRoute
+  '/admin/categories': typeof AdminLayoutCategoriesRoute
+  '/admin/education': typeof AdminLayoutEducationRoute
+  '/admin/experience': typeof AdminLayoutExperienceRoute
+  '/admin/media': typeof AdminLayoutMediaRoute
+  '/admin/messages': typeof AdminLayoutMessagesRoute
+  '/admin/portfolio': typeof AdminLayoutPortfolioRoute
+  '/admin/security': typeof AdminLayoutSecurityRoute
+  '/admin/seo': typeof AdminLayoutSeoRoute
+  '/admin/services': typeof AdminLayoutServicesRoute
+  '/admin/settings': typeof AdminLayoutSettingsRoute
+  '/admin/skills': typeof AdminLayoutSkillsRoute
+  '/admin/testimonials': typeof AdminLayoutTestimonialsRoute
+  '/api/auth/check': typeof ApiAuthCheckRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/projects/$id': typeof ApiProjectsIdRoute
+  '/admin': typeof AdminLayoutIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +301,148 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/projects': typeof ProjectsRoute
   '/services': typeof ServicesRoute
+  '/admin/_layout': typeof AdminLayoutRouteWithChildren
+  '/admin/google-callback': typeof AdminGoogleCallbackRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/api/contact': typeof ApiContactRoute
+  '/api/education': typeof ApiEducationRoute
+  '/api/experience': typeof ApiExperienceRoute
+  '/api/media': typeof ApiMediaRoute
+  '/api/messages': typeof ApiMessagesRoute
+  '/api/projects': typeof ApiProjectsRouteWithChildren
+  '/api/services': typeof ApiServicesRoute
+  '/api/settings': typeof ApiSettingsRoute
+  '/api/skills': typeof ApiSkillsRoute
+  '/admin/_layout/analytics': typeof AdminLayoutAnalyticsRoute
+  '/admin/_layout/backup': typeof AdminLayoutBackupRoute
+  '/admin/_layout/categories': typeof AdminLayoutCategoriesRoute
+  '/admin/_layout/education': typeof AdminLayoutEducationRoute
+  '/admin/_layout/experience': typeof AdminLayoutExperienceRoute
+  '/admin/_layout/media': typeof AdminLayoutMediaRoute
+  '/admin/_layout/messages': typeof AdminLayoutMessagesRoute
+  '/admin/_layout/portfolio': typeof AdminLayoutPortfolioRoute
+  '/admin/_layout/security': typeof AdminLayoutSecurityRoute
+  '/admin/_layout/seo': typeof AdminLayoutSeoRoute
+  '/admin/_layout/services': typeof AdminLayoutServicesRoute
+  '/admin/_layout/settings': typeof AdminLayoutSettingsRoute
+  '/admin/_layout/skills': typeof AdminLayoutSkillsRoute
+  '/admin/_layout/testimonials': typeof AdminLayoutTestimonialsRoute
+  '/api/auth/check': typeof ApiAuthCheckRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/projects/$id': typeof ApiProjectsIdRoute
+  '/admin/_layout/': typeof AdminLayoutIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/contact' | '/projects' | '/services'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/contact'
+    | '/projects'
+    | '/services'
+    | '/admin'
+    | '/admin/google-callback'
+    | '/admin/login'
+    | '/api/contact'
+    | '/api/education'
+    | '/api/experience'
+    | '/api/media'
+    | '/api/messages'
+    | '/api/projects'
+    | '/api/services'
+    | '/api/settings'
+    | '/api/skills'
+    | '/admin/analytics'
+    | '/admin/backup'
+    | '/admin/categories'
+    | '/admin/education'
+    | '/admin/experience'
+    | '/admin/media'
+    | '/admin/messages'
+    | '/admin/portfolio'
+    | '/admin/security'
+    | '/admin/seo'
+    | '/admin/services'
+    | '/admin/settings'
+    | '/admin/skills'
+    | '/admin/testimonials'
+    | '/api/auth/check'
+    | '/api/auth/login'
+    | '/api/projects/$id'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/contact' | '/projects' | '/services'
-  id: '__root__' | '/' | '/about' | '/contact' | '/projects' | '/services'
+  to:
+    | '/'
+    | '/about'
+    | '/contact'
+    | '/projects'
+    | '/services'
+    | '/admin/google-callback'
+    | '/admin/login'
+    | '/api/contact'
+    | '/api/education'
+    | '/api/experience'
+    | '/api/media'
+    | '/api/messages'
+    | '/api/projects'
+    | '/api/services'
+    | '/api/settings'
+    | '/api/skills'
+    | '/admin/analytics'
+    | '/admin/backup'
+    | '/admin/categories'
+    | '/admin/education'
+    | '/admin/experience'
+    | '/admin/media'
+    | '/admin/messages'
+    | '/admin/portfolio'
+    | '/admin/security'
+    | '/admin/seo'
+    | '/admin/services'
+    | '/admin/settings'
+    | '/admin/skills'
+    | '/admin/testimonials'
+    | '/api/auth/check'
+    | '/api/auth/login'
+    | '/api/projects/$id'
+    | '/admin'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/contact'
+    | '/projects'
+    | '/services'
+    | '/admin/_layout'
+    | '/admin/google-callback'
+    | '/admin/login'
+    | '/api/contact'
+    | '/api/education'
+    | '/api/experience'
+    | '/api/media'
+    | '/api/messages'
+    | '/api/projects'
+    | '/api/services'
+    | '/api/settings'
+    | '/api/skills'
+    | '/admin/_layout/analytics'
+    | '/admin/_layout/backup'
+    | '/admin/_layout/categories'
+    | '/admin/_layout/education'
+    | '/admin/_layout/experience'
+    | '/admin/_layout/media'
+    | '/admin/_layout/messages'
+    | '/admin/_layout/portfolio'
+    | '/admin/_layout/security'
+    | '/admin/_layout/seo'
+    | '/admin/_layout/services'
+    | '/admin/_layout/settings'
+    | '/admin/_layout/skills'
+    | '/admin/_layout/testimonials'
+    | '/api/auth/check'
+    | '/api/auth/login'
+    | '/api/projects/$id'
+    | '/admin/_layout/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +451,20 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   ProjectsRoute: typeof ProjectsRoute
   ServicesRoute: typeof ServicesRoute
+  AdminLayoutRoute: typeof AdminLayoutRouteWithChildren
+  AdminGoogleCallbackRoute: typeof AdminGoogleCallbackRoute
+  AdminLoginRoute: typeof AdminLoginRoute
+  ApiContactRoute: typeof ApiContactRoute
+  ApiEducationRoute: typeof ApiEducationRoute
+  ApiExperienceRoute: typeof ApiExperienceRoute
+  ApiMediaRoute: typeof ApiMediaRoute
+  ApiMessagesRoute: typeof ApiMessagesRoute
+  ApiProjectsRoute: typeof ApiProjectsRouteWithChildren
+  ApiServicesRoute: typeof ApiServicesRoute
+  ApiSettingsRoute: typeof ApiSettingsRoute
+  ApiSkillsRoute: typeof ApiSkillsRoute
+  ApiAuthCheckRoute: typeof ApiAuthCheckRoute
+  ApiAuthLoginRoute: typeof ApiAuthLoginRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,8 +504,270 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/skills': {
+      id: '/api/skills'
+      path: '/api/skills'
+      fullPath: '/api/skills'
+      preLoaderRoute: typeof ApiSkillsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/settings': {
+      id: '/api/settings'
+      path: '/api/settings'
+      fullPath: '/api/settings'
+      preLoaderRoute: typeof ApiSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/services': {
+      id: '/api/services'
+      path: '/api/services'
+      fullPath: '/api/services'
+      preLoaderRoute: typeof ApiServicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/projects': {
+      id: '/api/projects'
+      path: '/api/projects'
+      fullPath: '/api/projects'
+      preLoaderRoute: typeof ApiProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/messages': {
+      id: '/api/messages'
+      path: '/api/messages'
+      fullPath: '/api/messages'
+      preLoaderRoute: typeof ApiMessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/media': {
+      id: '/api/media'
+      path: '/api/media'
+      fullPath: '/api/media'
+      preLoaderRoute: typeof ApiMediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/experience': {
+      id: '/api/experience'
+      path: '/api/experience'
+      fullPath: '/api/experience'
+      preLoaderRoute: typeof ApiExperienceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/education': {
+      id: '/api/education'
+      path: '/api/education'
+      fullPath: '/api/education'
+      preLoaderRoute: typeof ApiEducationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/contact': {
+      id: '/api/contact'
+      path: '/api/contact'
+      fullPath: '/api/contact'
+      preLoaderRoute: typeof ApiContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/admin/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/google-callback': {
+      id: '/admin/google-callback'
+      path: '/admin/google-callback'
+      fullPath: '/admin/google-callback'
+      preLoaderRoute: typeof AdminGoogleCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/_layout': {
+      id: '/admin/_layout'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminLayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/_layout/': {
+      id: '/admin/_layout/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminLayoutIndexRouteImport
+      parentRoute: typeof AdminLayoutRoute
+    }
+    '/api/projects/$id': {
+      id: '/api/projects/$id'
+      path: '/$id'
+      fullPath: '/api/projects/$id'
+      preLoaderRoute: typeof ApiProjectsIdRouteImport
+      parentRoute: typeof ApiProjectsRoute
+    }
+    '/api/auth/login': {
+      id: '/api/auth/login'
+      path: '/api/auth/login'
+      fullPath: '/api/auth/login'
+      preLoaderRoute: typeof ApiAuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/check': {
+      id: '/api/auth/check'
+      path: '/api/auth/check'
+      fullPath: '/api/auth/check'
+      preLoaderRoute: typeof ApiAuthCheckRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/_layout/testimonials': {
+      id: '/admin/_layout/testimonials'
+      path: '/testimonials'
+      fullPath: '/admin/testimonials'
+      preLoaderRoute: typeof AdminLayoutTestimonialsRouteImport
+      parentRoute: typeof AdminLayoutRoute
+    }
+    '/admin/_layout/skills': {
+      id: '/admin/_layout/skills'
+      path: '/skills'
+      fullPath: '/admin/skills'
+      preLoaderRoute: typeof AdminLayoutSkillsRouteImport
+      parentRoute: typeof AdminLayoutRoute
+    }
+    '/admin/_layout/settings': {
+      id: '/admin/_layout/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminLayoutSettingsRouteImport
+      parentRoute: typeof AdminLayoutRoute
+    }
+    '/admin/_layout/services': {
+      id: '/admin/_layout/services'
+      path: '/services'
+      fullPath: '/admin/services'
+      preLoaderRoute: typeof AdminLayoutServicesRouteImport
+      parentRoute: typeof AdminLayoutRoute
+    }
+    '/admin/_layout/seo': {
+      id: '/admin/_layout/seo'
+      path: '/seo'
+      fullPath: '/admin/seo'
+      preLoaderRoute: typeof AdminLayoutSeoRouteImport
+      parentRoute: typeof AdminLayoutRoute
+    }
+    '/admin/_layout/security': {
+      id: '/admin/_layout/security'
+      path: '/security'
+      fullPath: '/admin/security'
+      preLoaderRoute: typeof AdminLayoutSecurityRouteImport
+      parentRoute: typeof AdminLayoutRoute
+    }
+    '/admin/_layout/portfolio': {
+      id: '/admin/_layout/portfolio'
+      path: '/portfolio'
+      fullPath: '/admin/portfolio'
+      preLoaderRoute: typeof AdminLayoutPortfolioRouteImport
+      parentRoute: typeof AdminLayoutRoute
+    }
+    '/admin/_layout/messages': {
+      id: '/admin/_layout/messages'
+      path: '/messages'
+      fullPath: '/admin/messages'
+      preLoaderRoute: typeof AdminLayoutMessagesRouteImport
+      parentRoute: typeof AdminLayoutRoute
+    }
+    '/admin/_layout/media': {
+      id: '/admin/_layout/media'
+      path: '/media'
+      fullPath: '/admin/media'
+      preLoaderRoute: typeof AdminLayoutMediaRouteImport
+      parentRoute: typeof AdminLayoutRoute
+    }
+    '/admin/_layout/experience': {
+      id: '/admin/_layout/experience'
+      path: '/experience'
+      fullPath: '/admin/experience'
+      preLoaderRoute: typeof AdminLayoutExperienceRouteImport
+      parentRoute: typeof AdminLayoutRoute
+    }
+    '/admin/_layout/education': {
+      id: '/admin/_layout/education'
+      path: '/education'
+      fullPath: '/admin/education'
+      preLoaderRoute: typeof AdminLayoutEducationRouteImport
+      parentRoute: typeof AdminLayoutRoute
+    }
+    '/admin/_layout/categories': {
+      id: '/admin/_layout/categories'
+      path: '/categories'
+      fullPath: '/admin/categories'
+      preLoaderRoute: typeof AdminLayoutCategoriesRouteImport
+      parentRoute: typeof AdminLayoutRoute
+    }
+    '/admin/_layout/backup': {
+      id: '/admin/_layout/backup'
+      path: '/backup'
+      fullPath: '/admin/backup'
+      preLoaderRoute: typeof AdminLayoutBackupRouteImport
+      parentRoute: typeof AdminLayoutRoute
+    }
+    '/admin/_layout/analytics': {
+      id: '/admin/_layout/analytics'
+      path: '/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AdminLayoutAnalyticsRouteImport
+      parentRoute: typeof AdminLayoutRoute
+    }
   }
 }
+
+interface AdminLayoutRouteChildren {
+  AdminLayoutAnalyticsRoute: typeof AdminLayoutAnalyticsRoute
+  AdminLayoutBackupRoute: typeof AdminLayoutBackupRoute
+  AdminLayoutCategoriesRoute: typeof AdminLayoutCategoriesRoute
+  AdminLayoutEducationRoute: typeof AdminLayoutEducationRoute
+  AdminLayoutExperienceRoute: typeof AdminLayoutExperienceRoute
+  AdminLayoutMediaRoute: typeof AdminLayoutMediaRoute
+  AdminLayoutMessagesRoute: typeof AdminLayoutMessagesRoute
+  AdminLayoutPortfolioRoute: typeof AdminLayoutPortfolioRoute
+  AdminLayoutSecurityRoute: typeof AdminLayoutSecurityRoute
+  AdminLayoutSeoRoute: typeof AdminLayoutSeoRoute
+  AdminLayoutServicesRoute: typeof AdminLayoutServicesRoute
+  AdminLayoutSettingsRoute: typeof AdminLayoutSettingsRoute
+  AdminLayoutSkillsRoute: typeof AdminLayoutSkillsRoute
+  AdminLayoutTestimonialsRoute: typeof AdminLayoutTestimonialsRoute
+  AdminLayoutIndexRoute: typeof AdminLayoutIndexRoute
+}
+
+const AdminLayoutRouteChildren: AdminLayoutRouteChildren = {
+  AdminLayoutAnalyticsRoute: AdminLayoutAnalyticsRoute,
+  AdminLayoutBackupRoute: AdminLayoutBackupRoute,
+  AdminLayoutCategoriesRoute: AdminLayoutCategoriesRoute,
+  AdminLayoutEducationRoute: AdminLayoutEducationRoute,
+  AdminLayoutExperienceRoute: AdminLayoutExperienceRoute,
+  AdminLayoutMediaRoute: AdminLayoutMediaRoute,
+  AdminLayoutMessagesRoute: AdminLayoutMessagesRoute,
+  AdminLayoutPortfolioRoute: AdminLayoutPortfolioRoute,
+  AdminLayoutSecurityRoute: AdminLayoutSecurityRoute,
+  AdminLayoutSeoRoute: AdminLayoutSeoRoute,
+  AdminLayoutServicesRoute: AdminLayoutServicesRoute,
+  AdminLayoutSettingsRoute: AdminLayoutSettingsRoute,
+  AdminLayoutSkillsRoute: AdminLayoutSkillsRoute,
+  AdminLayoutTestimonialsRoute: AdminLayoutTestimonialsRoute,
+  AdminLayoutIndexRoute: AdminLayoutIndexRoute,
+}
+
+const AdminLayoutRouteWithChildren = AdminLayoutRoute._addFileChildren(
+  AdminLayoutRouteChildren,
+)
+
+interface ApiProjectsRouteChildren {
+  ApiProjectsIdRoute: typeof ApiProjectsIdRoute
+}
+
+const ApiProjectsRouteChildren: ApiProjectsRouteChildren = {
+  ApiProjectsIdRoute: ApiProjectsIdRoute,
+}
+
+const ApiProjectsRouteWithChildren = ApiProjectsRoute._addFileChildren(
+  ApiProjectsRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -125,6 +775,20 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   ProjectsRoute: ProjectsRoute,
   ServicesRoute: ServicesRoute,
+  AdminLayoutRoute: AdminLayoutRouteWithChildren,
+  AdminGoogleCallbackRoute: AdminGoogleCallbackRoute,
+  AdminLoginRoute: AdminLoginRoute,
+  ApiContactRoute: ApiContactRoute,
+  ApiEducationRoute: ApiEducationRoute,
+  ApiExperienceRoute: ApiExperienceRoute,
+  ApiMediaRoute: ApiMediaRoute,
+  ApiMessagesRoute: ApiMessagesRoute,
+  ApiProjectsRoute: ApiProjectsRouteWithChildren,
+  ApiServicesRoute: ApiServicesRoute,
+  ApiSettingsRoute: ApiSettingsRoute,
+  ApiSkillsRoute: ApiSkillsRoute,
+  ApiAuthCheckRoute: ApiAuthCheckRoute,
+  ApiAuthLoginRoute: ApiAuthLoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

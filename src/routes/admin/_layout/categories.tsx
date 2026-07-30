@@ -4,12 +4,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { fetchWithAuth } from "@/lib/admin-api";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -222,9 +217,7 @@ function AdminCategories() {
               <Input
                 type="number"
                 value={form.displayOrder}
-                onChange={(e) =>
-                  setForm({ ...form, displayOrder: parseInt(e.target.value) || 0 })
-                }
+                onChange={(e) => setForm({ ...form, displayOrder: parseInt(e.target.value) || 0 })}
                 className="border-gray-800 bg-black"
               />
             </div>

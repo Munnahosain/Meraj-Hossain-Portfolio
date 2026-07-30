@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 interface PreloaderProps {
   onComplete: () => void;
@@ -7,9 +7,14 @@ interface PreloaderProps {
 export function Preloader({ onComplete }: PreloaderProps) {
   const [count, setCount] = useState(0);
   const [isFadingOut, setIsFadingOut] = useState(false);
+  const onCompleteRef = useRef(onComplete);
 
   useEffect(() => {
-    const duration = 1500; // 1.5 seconds
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  useEffect(() => {
+    const duration = 1200; // 1.2 seconds
     const startTime = performance.now();
     let animationFrameId: number;
 
@@ -26,9 +31,9 @@ export function Preloader({ onComplete }: PreloaderProps) {
         setTimeout(() => {
           setIsFadingOut(true);
           setTimeout(() => {
-            onComplete();
-          }, 800);
-        }, 300);
+            onCompleteRef.current();
+          }, 600);
+        }, 200);
       }
     };
 
@@ -37,7 +42,7 @@ export function Preloader({ onComplete }: PreloaderProps) {
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [onComplete]);
+  }, []);
 
   return (
     <div className={`preloader-overlay ${isFadingOut ? "preloader-hidden" : ""}`}>

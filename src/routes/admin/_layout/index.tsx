@@ -27,16 +27,13 @@ function AdminDashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        // Build an auth header only when a token exists
+        const authHeader = token ? { Authorization: "Bearer " + token } : {};
+
         const [projectsRes, categoriesRes, skillsRes] = await Promise.all([
-          fetch("/api/projects?limit=1000", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch("/api/categories", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch("/api/skills?limit=1000", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
+          fetch("/api/projects?limit=1000", { headers: authHeader }),
+          fetch("/api/categories", { headers: authHeader }),
+          fetch("/api/skills?limit=1000", { headers: authHeader }),
         ]);
 
         const projectsData = await projectsRes.json();
@@ -98,12 +95,36 @@ function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <StatCard icon={<Briefcase size={24} className="text-blue-500" />} label="Total Projects" value={stats?.totalProjects || 0} />
-        <StatCard icon={<Eye size={24} className="text-green-500" />} label="Featured Projects" value={stats?.featuredProjects || 0} />
-        <StatCard icon={<Layers size={24} className="text-purple-500" />} label="Categories" value={stats?.totalCategories || 0} />
-        <StatCard icon={<Code2 size={24} className="text-orange-500" />} label="Skills" value={stats?.totalSkills || 0} />
-        <StatCard icon={<Users size={24} className="text-pink-500" />} label="Visitors" value={stats?.visitors || 0} />
-        <StatCard icon={<Download size={24} className="text-cyan-500" />} label="Resume Downloads" value={stats?.resumeDownloads || 0} />
+        <StatCard
+          icon={<Briefcase size={24} className="text-blue-500" />}
+          label="Total Projects"
+          value={stats?.totalProjects || 0}
+        />
+        <StatCard
+          icon={<Eye size={24} className="text-green-500" />}
+          label="Featured Projects"
+          value={stats?.featuredProjects || 0}
+        />
+        <StatCard
+          icon={<Layers size={24} className="text-purple-500" />}
+          label="Categories"
+          value={stats?.totalCategories || 0}
+        />
+        <StatCard
+          icon={<Code2 size={24} className="text-orange-500" />}
+          label="Skills"
+          value={stats?.totalSkills || 0}
+        />
+        <StatCard
+          icon={<Users size={24} className="text-pink-500" />}
+          label="Visitors"
+          value={stats?.visitors || 0}
+        />
+        <StatCard
+          icon={<Download size={24} className="text-cyan-500" />}
+          label="Resume Downloads"
+          value={stats?.resumeDownloads || 0}
+        />
       </div>
 
       <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">

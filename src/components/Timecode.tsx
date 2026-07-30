@@ -5,7 +5,9 @@ export function Timecode() {
   useEffect(() => {
     const tick = () => {
       const d = new Date();
-      setTime(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`);
+      setTime(
+        `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`,
+      );
     };
     tick();
     const id = setInterval(tick, 1000);

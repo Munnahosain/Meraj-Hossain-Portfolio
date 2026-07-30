@@ -174,16 +174,8 @@ function AdminLogin() {
             <p className="text-sm text-gray-500">
               Only authorized admin email can access this panel
             </p>
-            {error && (
-              <p className="mt-4 text-sm text-red-400">
-                {error}
-              </p>
-            )}
-            {info && (
-              <p className="mt-4 text-sm text-gray-300">
-                {info}
-              </p>
-            )}
+            {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+            {info && <p className="mt-4 text-sm text-gray-300">{info}</p>}
           </div>
         </div>
       </div>

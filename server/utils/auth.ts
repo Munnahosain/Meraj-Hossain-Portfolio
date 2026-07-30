@@ -1,14 +1,14 @@
-import { H3Event } from 'h3';
-import { verifyToken, extractTokenFromHeader } from './jwt';
+import { H3Event } from "h3";
+import { verifyToken, extractTokenFromHeader } from "./jwt";
 
 export async function requireAuth(event: H3Event) {
-  const authHeader = getHeader(event, 'authorization');
+  const authHeader = getHeader(event, "authorization");
   const token = extractTokenFromHeader(authHeader);
 
   if (!token) {
     throw createError({
       statusCode: 401,
-      statusMessage: 'Unauthorized - No token provided',
+      statusMessage: "Unauthorized - No token provided",
     });
   }
 
@@ -16,7 +16,7 @@ export async function requireAuth(event: H3Event) {
   if (!payload) {
     throw createError({
       statusCode: 401,
-      statusMessage: 'Unauthorized - Invalid token',
+      statusMessage: "Unauthorized - Invalid token",
     });
   }
 
@@ -32,7 +32,7 @@ export async function requireAdminEmail(event: H3Event) {
   if (!allowedEmail || user.email?.trim().toLowerCase() !== allowedEmail) {
     throw createError({
       statusCode: 403,
-      statusMessage: 'Access Denied - Admin email not authorized',
+      statusMessage: "Access Denied - Admin email not authorized",
     });
   }
 

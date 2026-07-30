@@ -4,12 +4,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { fetchWithAuth } from "@/lib/admin-api";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -192,9 +187,7 @@ function AdminPortfolio() {
                 <TableRow key={project._id} className="border-gray-800">
                   <TableCell className="text-white font-medium">{project.title}</TableCell>
                   <TableCell className="text-gray-400 capitalize">{project.status}</TableCell>
-                  <TableCell className="text-gray-400">
-                    {project.featured ? "Yes" : "No"}
-                  </TableCell>
+                  <TableCell className="text-gray-400">{project.featured ? "Yes" : "No"}</TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
@@ -282,9 +275,7 @@ function AdminPortfolio() {
             <FormField label="Status">
               <Select
                 value={form.status}
-                onValueChange={(v) =>
-                  setForm({ ...form, status: v as "draft" | "published" })
-                }
+                onValueChange={(v) => setForm({ ...form, status: v as "draft" | "published" })}
               >
                 <SelectTrigger className="border-gray-800 bg-black">
                   <SelectValue />
@@ -325,13 +316,7 @@ function AdminPortfolio() {
   );
 }
 
-function FormField({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
       <Label className="text-gray-400">{label}</Label>

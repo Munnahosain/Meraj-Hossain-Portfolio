@@ -26,10 +26,7 @@ function AdminSettings() {
   useEffect(() => {
     const load = async () => {
       try {
-        const result = await fetchWithAuth<{ data: SettingsData }>(
-          token,
-          "/api/settings",
-        );
+        const result = await fetchWithAuth<{ data: SettingsData }>(token, "/api/settings");
         setSettings(result.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load settings");
@@ -50,17 +47,10 @@ function AdminSettings() {
     });
   };
 
-  const updateSocial = (
-    platform: string,
-    field: "url" | "enabled",
-    value: string | boolean,
-  ) => {
+  const updateSocial = (platform: string, field: "url" | "enabled", value: string | boolean) => {
     setSettings((prev) => {
       if (!prev) return prev;
-      const social = (prev.social || {}) as Record<
-        string,
-        { url: string; enabled: boolean }
-      >;
+      const social = (prev.social || {}) as Record<string, { url: string; enabled: boolean }>;
       return {
         ...prev,
         social: {
@@ -133,44 +123,38 @@ function AdminSettings() {
 
         <TabsContent value="general" className="space-y-4">
           <SettingsSection title="Branding">
-            {(["websiteName", "browserTitle", "websiteLogo", "favicon"] as const).map(
-              (field) => (
-                <Field
-                  key={field}
-                  label={field}
-                  value={String((settings.branding as Record<string, string>)?.[field] || "")}
-                  onChange={(v) => updateField("branding", field, v)}
-                />
-              ),
-            )}
+            {(["websiteName", "browserTitle", "websiteLogo", "favicon"] as const).map((field) => (
+              <Field
+                key={field}
+                label={field}
+                value={String((settings.branding as Record<string, string>)?.[field] || "")}
+                onChange={(v) => updateField("branding", field, v)}
+              />
+            ))}
           </SettingsSection>
           <SettingsSection title="General Info">
-            {(["ownerName", "profession", "tagline", "shortDescription"] as const).map(
-              (field) => (
-                <Field
-                  key={field}
-                  label={field}
-                  value={String((settings.general as Record<string, string>)?.[field] || "")}
-                  onChange={(v) => updateField("general", field, v)}
-                  multiline={field === "shortDescription"}
-                />
-              ),
-            )}
+            {(["ownerName", "profession", "tagline", "shortDescription"] as const).map((field) => (
+              <Field
+                key={field}
+                label={field}
+                value={String((settings.general as Record<string, string>)?.[field] || "")}
+                onChange={(v) => updateField("general", field, v)}
+                multiline={field === "shortDescription"}
+              />
+            ))}
           </SettingsSection>
         </TabsContent>
 
         <TabsContent value="contact" className="space-y-4">
           <SettingsSection title="Contact Details">
-            {(["email", "phone", "whatsapp", "address", "googleMapsLink"] as const).map(
-              (field) => (
-                <Field
-                  key={field}
-                  label={field}
-                  value={String((settings.contact as Record<string, string>)?.[field] || "")}
-                  onChange={(v) => updateField("contact", field, v)}
-                />
-              ),
-            )}
+            {(["email", "phone", "whatsapp", "address", "googleMapsLink"] as const).map((field) => (
+              <Field
+                key={field}
+                label={field}
+                value={String((settings.contact as Record<string, string>)?.[field] || "")}
+                onChange={(v) => updateField("contact", field, v)}
+              />
+            ))}
           </SettingsSection>
         </TabsContent>
 
@@ -258,13 +242,7 @@ function AdminSettings() {
   );
 }
 
-function SettingsSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-gray-800 bg-gray-900 p-6 space-y-4">
       <h2 className="text-lg font-semibold text-white">{title}</h2>
