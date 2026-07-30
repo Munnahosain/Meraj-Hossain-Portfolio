@@ -36,7 +36,7 @@
 
 :root {
   --radius: 0.25rem;
-  --background: #071913; /* very dark green */
+  --background: #000; /* full black background */
   --foreground: #E6FFF3;
   --card: #0f2a1f;
   --card-foreground: #e6fff3;
@@ -317,6 +317,7 @@ body {
 svg {
   color: currentColor;
   fill: currentColor;
+  stroke: currentColor;
   display: inline-block;
   vertical-align: middle;
 }

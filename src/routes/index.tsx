@@ -37,10 +37,10 @@ export const Route = createFileRoute("/")({
 });
 
 const defaultProjects = [
-  { title: "Micro Electronic Campaign", year: "2025", cat: "Branding Â· Print", img: reel1 },
+  { title: "Micro Electronic Campaign", year: "2025", cat: "Branding · Print", img: reel1 },
   { title: "Adobe Stock â€” Motion Pack", year: "2024", cat: "Motion Graphics", img: reel3 },
   { title: "Social Reels Series", year: "2025", cat: "Video Editing", img: reel5 },
-  { title: "Promo Cutdowns", year: "2024", cat: "Promo Â· Color", img: reel6 },
+  { title: "Promo Cutdowns", year: "2024", cat: "Promo · Color", img: reel6 },
 ];
 
 const defaultServices = [
@@ -77,9 +77,9 @@ const defaultServices = [
 ];
 
 const defaultStack = [
-  { name: "Adobe Photoshop", role: "Retouch Â· Composite" },
-  { name: "Adobe Illustrator", role: "Vector Â· Logo" },
-  { name: "Adobe After Effects", role: "Motion Â· VFX" },
+  { name: "Adobe Photoshop", role: "Retouch · Composite" },
+  { name: "Adobe Illustrator", role: "Vector · Logo" },
+  { name: "Adobe After Effects", role: "Motion · VFX" },
   { name: "Adobe Premiere Pro", role: "Edit Â· Color" },
 ];
 
@@ -162,7 +162,7 @@ function Index() {
 
   const contactEmail = settings?.contact?.email || "munnahosain042@gmail.com";
   const contactPhone = settings?.contact?.phone || "+880 1300-294781";
-  const contactLocation = settings?.contact?.address || "Nagar Kanda 1216 Â· Savar Â· Dhaka";
+  const contactLocation = settings?.contact?.address || "Nagar Kanda 1216 · Savar · Dhaka";
 
   return (
     <SiteChrome>
@@ -178,7 +178,7 @@ function Index() {
           <span>Portfolio / {new Date().getFullYear()}</span>
           <span className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-red)] animate-hero-dot" />
-            LIVE Â· <Timecode />
+            LIVE · <Timecode />
           </span>
         </div>
 
@@ -186,7 +186,7 @@ function Index() {
         <div className="relative flex flex-col items-center justify-center my-6 md:my-10 w-full select-none">
           {/* Back Layer: First Name */}
           <h1
-            className="font-display uppercase leading-[0.85] tracking-tight text-center relative z-10 hero-portrait"
+            className="font-display uppercase leading-[0.9] tracking-tight text-center relative z-10 hero-name"
             style={{
               fontSize: "clamp(3.5rem, 16vw, 16rem)",
               animation: "heroClip 1.3s cubic-bezier(0.19,1,0.22,1) 0.2s both",
@@ -213,7 +213,7 @@ function Index() {
 
           {/* Front Layer: Last Name */}
           <h1
-            className="font-display uppercase leading-[0.85] tracking-tight text-center relative z-30 hero-portrait mt-[-2.5vw]"
+            className="font-display uppercase leading-[0.9] tracking-tight text-center relative z-30 hero-name"
             style={{
               fontSize: "clamp(3.5rem, 15vw, 15rem)",
               animation: "heroClip 1.3s cubic-bezier(0.19,1,0.22,1) 0.55s both",
@@ -259,7 +259,7 @@ function Index() {
               />
               <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black to-transparent" />
               <div className="absolute bottom-3 left-3 font-mono text-[10px] uppercase tracking-widest text-white/80">
-                {heroTitle} Â· Dhaka
+                {heroTitle} · Dhaka
               </div>
             </div>
           </div>
