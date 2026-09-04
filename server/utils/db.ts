@@ -9,10 +9,6 @@ if (!process.env.MONGODB_URI) {
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
-if (!MONGODB_URI) {
-  throw new Error("MONGODB_URI is not defined in environment variables");
-}
-
 let isConnected = false;
 
 // Listen for disconnect so next call will reconnect
@@ -26,6 +22,10 @@ mongoose.connection.on("error", () => {
 });
 
 export async function connectDB() {
+  if (!MONGODB_URI) {
+    throw new Error("MONGODB_URI is not defined in environment variables");
+  }
+
   if (isConnected && mongoose.connection.readyState === 1) {
     return mongoose.connection;
   }
