@@ -68,8 +68,8 @@ function ContactPage() {
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-red)] mb-6">
             Get in touch
           </div>
-          <h1 className="font-display uppercase text-6xl md:text-[10rem] leading-[0.85]">
-            Let's <br />
+          <h1 className="font-display uppercase text-6xl md:text-[10rem] leading-[0.95]">
+            Let's <br/>
             talk.
           </h1>
         </div>

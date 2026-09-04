@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { Save, Search, AlertCircle } from "lucide-react";
+import { fetchWithAuth } from "@/lib/admin-api";
 
 export const Route = createFileRoute("/admin/_layout/seo")({
   component: AdminSEO,
@@ -60,28 +61,9 @@ export function AdminSEO() {
         .map((k) => k.trim())
         .filter((k) => k.length > 0);
 
-      const res = await fetch("/api/settings", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          seo: {
-            ...form,
-            keywords: keywordsArray,
-          },
-        }),
-      });
-
-      const json = await res.json();
-      if (json.success) {
-        setIsError(false);
-        setMessage("SEO settings saved successfully!");
-      } else {
-        setIsError(true);
-        setMessage(json.message || "Failed to save SEO settings.");
-      }
+      await fetchWithAuth(token, "/api/settings", { method: "PUT", body: JSON.stringify({ seo: { ...form, keywords: keywordsArray } }) });
+      setIsError(false);
+      setMessage("SEO settings saved successfully!");
     } catch {
       setIsError(true);
       setMessage("Network error. Please try again.");
@@ -197,7 +179,7 @@ export function AdminSEO() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="bg-[var(--brand-red)] text-white font-semibold py-2.5 px-6 rounded hover:brightness-110 disabled:opacity-50 transition-all flex items-center gap-2"
+          className="btn-primary text-white font-semibold py-2.5 px-6 rounded disabled:opacity-50 transition-all flex items-center gap-2"
         >
           <Save size={18} />
           {isSubmitting ? "Saving SEO settings..." : "Save Settings"}
@@ -206,3 +188,5 @@ export function AdminSEO() {
     </div>
   );
 }
+
+

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteChrome } from "@/components/SiteChrome";
 import { useCMSProjects } from "@/hooks/use-cms";
 import reel1 from "@/assets/reel-01.jpg";
@@ -75,6 +75,7 @@ function ProjectsPage() {
 
   const displayProjects = dbProjects?.length
     ? dbProjects.map((p: any) => ({
+        id: p._id,
         title: p.title,
         year: p.createdAt ? new Date(p.createdAt).getFullYear().toString() : "2025",
         cat: p.category || "Project",
@@ -99,49 +100,51 @@ function ProjectsPage() {
       <section className="px-6 md:px-12 pb-32">
         <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-10 md:gap-20">
           {displayProjects.map((p: any, i: number) => (
-            <article key={p.title + i} className={`group ${i % 2 === 1 ? "md:mt-32" : ""}`}>
-              <div className="relative aspect-[4/5] overflow-hidden bg-neutral-900 border border-white/5">
-                {p.mediaInfo?.youtubeEmbed ? (
-                  <iframe
-                    src={p.mediaInfo.youtubeEmbed}
-                    title={p.title}
-                    className="w-full h-full object-cover border-0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                ) : p.mediaInfo?.googleDriveEmbed ? (
-                  <iframe
-                    src={p.mediaInfo.googleDriveEmbed}
-                    title={p.title}
-                    className="w-full h-full object-cover border-0"
-                    allow="autoplay"
-                  />
-                ) : (
-                  <img
-                    src={p.img}
-                    alt={p.title}
-                    width={800}
-                    height={1000}
-                    loading="lazy"
-                    className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700"
-                  />
-                )}
-                <div className="absolute top-6 left-6 font-mono text-[10px] uppercase tracking-widest bg-black/60 backdrop-blur px-2 py-1 border border-white/10">
-                  {p.cat}
+            <Link key={(p.title || p.id) + i} to={`/project?id=${p.id}`} className={`group block ${i % 2 === 1 ? "md:mt-32" : ""}`}>
+              <article>
+                <div className="relative aspect-[4/5] overflow-hidden bg-neutral-900 border border-white/5">
+                  {p.mediaInfo?.youtubeEmbed ? (
+                    <iframe
+                      src={p.mediaInfo.youtubeEmbed}
+                      title={p.title}
+                      className="w-full h-full object-cover border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  ) : p.mediaInfo?.googleDriveEmbed ? (
+                    <iframe
+                      src={p.mediaInfo.googleDriveEmbed}
+                      title={p.title}
+                      className="w-full h-full object-cover border-0"
+                      allow="autoplay"
+                    />
+                  ) : (
+                    <img
+                      src={p.img}
+                      alt={p.title}
+                      width={800}
+                      height={1000}
+                      loading="lazy"
+                      className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700"
+                    />
+                  )}
+                  <div className="absolute top-6 left-6 font-mono text-[10px] uppercase tracking-widest bg-black/60 backdrop-blur px-2 py-1 border border-white/10">
+                    {p.cat}
+                  </div>
                 </div>
-              </div>
-              <div className="mt-6 flex items-start justify-between gap-6">
-                <div>
-                  <h2 className="font-display uppercase text-3xl md:text-4xl group-hover:text-[var(--brand-red)] transition-colors">
-                    {p.title}
-                  </h2>
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-white/40 mt-2">
-                    {p.client}
-                  </p>
+                <div className="mt-6 flex items-start justify-between gap-6">
+                  <div>
+                    <h2 className="font-display uppercase text-3xl md:text-4xl group-hover:text-[var(--brand-red)] transition-colors">
+                      {p.title}
+                    </h2>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-white/40 mt-2">
+                      {p.client}
+                    </p>
+                  </div>
+                  <span className="font-mono text-xs text-white/40 shrink-0">{p.year}</span>
                 </div>
-                <span className="font-mono text-xs text-white/40 shrink-0">{p.year}</span>
-              </div>
-            </article>
+              </article>
+            </Link>
           ))}
         </div>
       </section>

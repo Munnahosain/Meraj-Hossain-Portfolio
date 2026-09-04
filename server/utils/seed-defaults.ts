@@ -18,7 +18,8 @@ export async function ensureInitialSeed() {
         branding: {
           websiteName: "Meraj Hossain",
           browserTitle: "Meraj Hossain — Graphics & Motion Designer",
-          websiteLogo: "",
+          websiteLogo: "/MCU-LOGO-0.2V-1.png",
+          footerLogo: "/MCU-LOGO-0.2V-1.png",
           favicon: "/favicon.ico",
         },
         general: {
@@ -29,7 +30,7 @@ export async function ensureInitialSeed() {
             "Graphics designer, video editor and motion graphics artist based in Dhaka, Bangladesh.",
         },
         contact: {
-          email: "merajhossain042@gmail.com",
+          email: "merajhossain.mcu@gmail.com",
           phone: "+880 1700 000 000",
           whatsapp: "+8801700000000",
           address: "Dhaka, Bangladesh",
@@ -49,6 +50,7 @@ export async function ensureInitialSeed() {
           title: "Meraj Hossain",
           subtitle: "Graphics Designer · Video Editor · Motion Artist",
           description: "Turning briefs into visual moments people remember.",
+          reelImages: [],
           resumeButtonText: "Download Resume",
           hireMeButtonText: "Hire Me",
           contactButtonText: "Contact Studio",

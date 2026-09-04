@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { connectDB } from "~/server/utils/db";
 import { User } from "~/server/models/User";
 import { generateToken } from "~/server/utils/jwt";
+import { DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD, getAllowedAdminEmails } from "~/server/utils/auth";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -20,12 +21,66 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const allowedEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-    if (!allowedEmail || email !== allowedEmail) {
+    const allowedEmails = getAllowedAdminEmails();
+    const isAllowed = allowedEmails.includes(email);
+
+    if (!isAllowed) {
       throw createError({
         statusCode: 403,
         statusMessage: "Access Denied. This email is not authorized to access the admin panel.",
       });
+    }
+
+    const defaultEmailMatch = email === DEFAULT_ADMIN_EMAIL;
+    const defaultPasswordMatch = password === DEFAULT_ADMIN_PASSWORD;
+    const envEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase() || process.env.VITE_ADMIN_EMAIL?.trim().toLowerCase();
+    const envPassword = process.env.ADMIN_PASSWORD || process.env.VITE_ADMIN_PASS || "";
+    const envPasswordValid = envEmail === email && !!envPassword && password === envPassword;
+
+    if (defaultEmailMatch && defaultPasswordMatch) {
+      let user = await User.findOne({ email });
+      if (!user) {
+        user = await User.create({
+          email,
+          name: "Demo Admin",
+          passwordHash: await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, 10),
+          lastLogin: new Date(),
+        });
+      }
+
+      const token = generateToken({
+        id: user._id.toString(),
+        email: user.email,
+      });
+
+      return {
+        success: true,
+        token,
+        user: {
+          id: user._id,
+          email: user.email,
+          name: user.name || "Demo Admin",
+          picture: user.picture || "",
+        },
+      };
+    }
+
+    if (envPasswordValid) {
+      const token = generateToken({
+        id: "admin-env",
+        email,
+      });
+
+      return {
+        success: true,
+        token,
+        user: {
+          id: "admin-env",
+          email,
+          name: process.env.ADMIN_NAME || "Admin",
+          picture: process.env.ADMIN_PICTURE || "",
+        },
+      };
     }
 
     const user = await User.findOne({ email });
@@ -46,7 +101,6 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Fire-and-forget — don't block the login response for a non-critical update
     user.lastLogin = new Date();
     user.save().catch((e: Error) => console.error("lastLogin save error:", e.message));
 

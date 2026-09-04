@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback, useMemo } from "react";
 import reel1 from "@/assets/reel-01.jpg";
 import reel2 from "@/assets/reel-02.jpg";
 import reel3 from "@/assets/reel-03.jpg";
@@ -8,8 +8,7 @@ import reel5 from "@/assets/reel-05.jpg";
 import reel6 from "@/assets/reel-06.jpg";
 import reel7 from "@/assets/reel-07.jpg";
 
-const shots = [reel1, reel2, reel3, reel4, reel5, reel6, reel7];
-const DOUBLED = [...shots, ...shots];
+export const DEFAULT_REEL_IMAGES = [reel1, reel2, reel3, reel4, reel5, reel6, reel7];
 
 // ── Scroll wheel geometry ─────────────────────────────────────────
 const RIB_WIDTH = 6; // px per rib groove
@@ -18,8 +17,21 @@ const RIB_STRIP_W = RIB_COUNT * RIB_WIDTH;
 const R_LABEL = 5; // major tick every N ribs (used for ratio calc)
 const WHEEL_TICK = RIB_WIDTH; // px per "tick" for ratio math
 
+function getImageSrc(src: string) {
+  if (src.startsWith("/uploads/")) {
+    return `/api/uploads/${encodeURIComponent(src.split("/").pop() || "")}`;
+  }
+  return src;
+}
+
 // ─────────────────────────────────────────────────────────────────
-export function ReelMarquee() {
+export function ReelMarquee({ images }: { images?: string[] }) {
+  const activeShots = useMemo(
+    () => (images?.filter(Boolean).length ? images.filter(Boolean) : DEFAULT_REEL_IMAGES),
+    [images],
+  );
+  const doubledShots = useMemo(() => [...activeShots, ...activeShots], [activeShots]);
+
   const trackRef = useRef<HTMLDivElement>(null); // image strip
   const rulerRef = useRef<HTMLDivElement>(null); // ruler strip
   const rulerWrapRef = useRef<HTMLDivElement>(null); // ruler container (for width)
@@ -142,7 +154,7 @@ export function ReelMarquee() {
     if (!el) return;
 
     const hw = el.scrollWidth / 2; // one full loop
-    const pi = hw / shots.length; // px per image slot
+    const pi = hw / activeShots.length; // px per image slot
     s.current.halfWidth = hw;
     // 1 image = R_LABEL ribs on wheel → ratio = (R_LABEL * WHEEL_TICK) / perImage
     s.current.rulerRatio = (R_LABEL * WHEEL_TICK) / pi;
@@ -153,32 +165,27 @@ export function ReelMarquee() {
       cancelAnimationFrame(s.current.autoRaf);
       cancelAnimationFrame(s.current.glideRaf);
     };
-  }, [auto]);
+  }, [auto, activeShots.length]);
 
   // ─────────────────────────────────────────────────────────────
   return (
-    <div className="relative w-full select-none">
-      {/* ── Image strip ─────────────────────────────────────── */}
+    <div className="relative w-full select-none hero-marquee-frame">
       <div
-        className="relative w-full overflow-hidden py-1"
-        style={{
-          maskImage:
-            "linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%)",
-          cursor: "grab",
-        }}
+        className="relative w-full overflow-hidden py-1 hero-marquee-inner"
+        style={{ cursor: "grab" }}
         onPointerDown={(e) => onDown(e, "img")}
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerLeave={onUp}
       >
         <div ref={trackRef} className="flex gap-6 w-max will-change-transform">
-          {DOUBLED.map((src, i) => (
+          {doubledShots.map((src, i) => (
             <div
               key={i}
-              className="relative w-[220px] md:w-[280px] aspect-[4/5] shrink-0 overflow-hidden bg-neutral-900 rounded-sm"
+              className="relative w-[220px] md:w-[280px] aspect-[4/5] shrink-0 overflow-hidden bg-neutral-900 filmstrip-cell"
             >
               <img
-                src={src}
+                src={getImageSrc(src)}
                 alt=""
                 width={800}
                 height={1000}
@@ -186,6 +193,7 @@ export function ReelMarquee() {
                 draggable={false}
                 className="w-full h-full object-cover grayscale-[30%] hover:grayscale-0 transition-all duration-700 pointer-events-none"
               />
+              <div className="filmstrip-scratch" />
               {i % 5 === 0 && (
                 <div
                   className="absolute inset-0 mix-blend-multiply pointer-events-none"
@@ -199,7 +207,6 @@ export function ReelMarquee() {
           ))}
         </div>
       </div>
-
     </div>
   );
 }

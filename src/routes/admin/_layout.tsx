@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { fetchWithAuth } from "@/lib/admin-api";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 
 export const Route = createFileRoute("/admin/_layout")({
@@ -22,18 +23,8 @@ function AdminLayout() {
       }
 
       try {
-        const response = await fetch("/api/auth/check", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          setIsAuthenticated(true);
-        } else {
-          setToken("");
-          navigate({ to: "/admin/login", replace: true });
-        }
+        await fetchWithAuth(token, "/api/auth/check");
+        setIsAuthenticated(true);
       } catch (error) {
         console.error("Auth check failed:", error);
         setToken("");
@@ -72,3 +63,4 @@ function AdminLayout() {
     </div>
   );
 }
+

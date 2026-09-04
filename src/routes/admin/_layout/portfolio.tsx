@@ -48,7 +48,16 @@ interface Category {
   name: string;
 }
 
-const emptyProject = (): Omit<Project, "_id"> => ({
+const emptyProject = (): Omit<Project, "_id"> & {
+  liveWebsite: string;
+  googleDriveLink: string;
+  youtubeLink: string;
+  behanceLink: string;
+  githubLink: string;
+  clientName: string;
+  galleryImages: string[];
+  tags: string[];
+} => ({
   title: "",
   slug: "",
   category: "",
@@ -59,7 +68,45 @@ const emptyProject = (): Omit<Project, "_id"> => ({
   hidden: false,
   status: "draft",
   displayOrder: 0,
+  liveWebsite: "",
+  googleDriveLink: "",
+  youtubeLink: "",
+  behanceLink: "",
+  githubLink: "",
+  clientName: "",
+  galleryImages: [],
+  tags: [],
 });
+
+function generateSlug(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+}
+
+// Helpers to generate preview thumbnails for common link types
+function extractYouTubeId(url: string): string | null {
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+  return match ? match[1] : null;
+}
+
+function getYouTubeThumb(url: string) {
+  const id = extractYouTubeId(url);
+  return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : url;
+}
+
+function extractGoogleDriveId(url: string): string | null {
+  if (!url) return null;
+  const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : null;
+}
+
+function getDriveThumb(url: string) {
+  const id = extractGoogleDriveId(url);
+  return id ? `https://drive.google.com/uc?id=${id}&export=view` : url;
+}
 
 function AdminPortfolio() {
   const [token] = useLocalStorage("admin_token", "");
@@ -110,6 +157,14 @@ function AdminPortfolio() {
       hidden: project.hidden,
       status: project.status,
       displayOrder: project.displayOrder,
+      liveWebsite: (project as any).liveWebsite || "",
+      googleDriveLink: (project as any).googleDriveLink || "",
+      youtubeLink: (project as any).youtubeLink || "",
+      behanceLink: (project as any).behanceLink || "",
+      githubLink: (project as any).githubLink || "",
+      clientName: (project as any).clientName || "",
+      galleryImages: Array.isArray((project as any).galleryImages) ? (project as any).galleryImages : [],
+      tags: Array.isArray((project as any).tags) ? (project as any).tags : [],
     });
     setDialogOpen(true);
   };
@@ -118,15 +173,30 @@ function AdminPortfolio() {
     setIsSaving(true);
     setError("");
     try {
+      const payload = {
+        ...form,
+        category: form.category || categories[0]?._id || "Uncategorized",
+        slug: form.slug?.trim() || generateSlug(form.title || "project"),
+        title: form.title.trim(),
+        shortDescription: form.shortDescription.trim(),
+        fullDescription: form.fullDescription.trim(),
+        galleryImages: Array.isArray(form.galleryImages) ? form.galleryImages : [],
+        tags: Array.isArray(form.tags) ? form.tags : [],
+      };
+
+      if (!payload.title) {
+        throw new Error("Project title is required");
+      }
+
       if (editing) {
         await fetchWithAuth(token, `/api/projects/${editing._id}`, {
           method: "PUT",
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         });
       } else {
         await fetchWithAuth(token, "/api/projects", {
           method: "POST",
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         });
       }
       setDialogOpen(false);
@@ -157,7 +227,7 @@ function AdminPortfolio() {
           <h1 className="text-3xl font-bold text-white">Portfolio</h1>
           <p className="text-gray-500">Manage your projects</p>
         </div>
-        <Button onClick={openCreate} className="bg-[var(--brand-red)] hover:brightness-110">
+        <Button onClick={openCreate} className="btn-primary">
           <Plus size={16} className="mr-2" />
           Add Project
         </Button>
@@ -271,6 +341,204 @@ function AdminPortfolio() {
                 onChange={(e) => setForm({ ...form, thumbnail: e.target.value })}
                 className="border-gray-800 bg-black"
               />
+              <div className="mt-2 text-xs text-gray-400">Or upload a file</div>
+              <input
+                type="file"
+                accept="image/*,video/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  try {
+                    const reader = new FileReader();
+                    reader.onload = async () => {
+                      const dataUrl = String(reader.result || "");
+                      // Upload to server
+                      const res = await fetchWithAuth<{ success: boolean; data?: { url?: string }; message?: string }>(token, "/api/media", {
+                        method: "POST",
+                        body: JSON.stringify({
+                          data: dataUrl,
+                          filename: file.name,
+                          title: form.title || file.name,
+                          alt: form.shortDescription || file.name,
+                        }),
+                      });
+                      if (res?.success && res.data?.url) {
+                        setForm({ ...form, thumbnail: res.data.url });
+                      } else {
+                        setError(res?.message || "Upload failed");
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : "Upload failed");
+                  }
+                }}
+                className="mt-2 text-sm text-white"
+              />
+              {form.thumbnail ? (
+                <div className="mt-3">
+                  <div className="text-xs text-gray-400 mb-1">Preview</div>
+                  <div className="w-40 h-24 bg-neutral-900 border border-gray-800 overflow-hidden rounded">
+                    {/* Attempt to render image/video thumbnail */}
+                    {form.thumbnail.includes("youtube.com") || form.thumbnail.includes("youtu.be") ? (
+                      <img src={getYouTubeThumb(form.thumbnail)} alt="preview" className="w-full h-full object-cover" />
+                    ) : form.thumbnail.includes("drive.google.com") ? (
+                      <img src={getDriveThumb(form.thumbnail)} alt="preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={form.thumbnail} alt="preview" className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </FormField>
+            <FormField label="Client Name">
+              <Input
+                value={(form as any).clientName || ""}
+                onChange={(e) => setForm({ ...form, clientName: e.target.value })}
+                className="border-gray-800 bg-black"
+                placeholder="Client or brand"
+              />
+            </FormField>
+            <FormField label="Live Website URL">
+              <Input
+                value={(form as any).liveWebsite || ""}
+                onChange={(e) => setForm({ ...form, liveWebsite: e.target.value })}
+                className="border-gray-800 bg-black"
+                placeholder="https://example.com"
+              />
+            </FormField>
+            <FormField label="Google Drive Link">
+              <Input
+                value={(form as any).googleDriveLink || ""}
+                onChange={(e) => setForm({ ...form, googleDriveLink: e.target.value })}
+                className="border-gray-800 bg-black"
+                placeholder="https://drive.google.com/..."
+              />
+            </FormField>
+            <FormField label="YouTube Link">
+              <Input
+                value={(form as any).youtubeLink || ""}
+                onChange={(e) => setForm({ ...form, youtubeLink: e.target.value })}
+                className="border-gray-800 bg-black"
+                placeholder="https://youtube.com/watch?v=..."
+              />
+            </FormField>
+            <FormField label="Behance Link">
+              <Input
+                value={(form as any).behanceLink || ""}
+                onChange={(e) => setForm({ ...form, behanceLink: e.target.value })}
+                className="border-gray-800 bg-black"
+                placeholder="https://behance.net/..."
+              />
+            </FormField>
+            <FormField label="GitHub Link">
+              <Input
+                value={(form as any).githubLink || ""}
+                onChange={(e) => setForm({ ...form, githubLink: e.target.value })}
+                className="border-gray-800 bg-black"
+                placeholder="https://github.com/..."
+              />
+            </FormField>
+            <FormField label="Gallery Images">
+              <div className="space-y-3">
+                <div className="text-xs text-gray-500 mb-2">
+                  Add multiple images to the project gallery
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {Array.isArray((form as any).galleryImages) &&
+                    (form as any).galleryImages.map((img: string, idx: number) => (
+                      <div key={idx} className="relative group">
+                        <div className="w-full aspect-square bg-neutral-900 border border-gray-800 overflow-hidden rounded">
+                          <img src={img} alt={`gallery-${idx}`} className="w-full h-full object-cover" />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = [...(form as any).galleryImages];
+                            updated.splice(idx, 1);
+                            setForm({ ...form, galleryImages: updated });
+                          }}
+                          className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                </div>
+                <div className="space-y-2">
+                  <Input
+                    value={(form as any)._galleryImageUrl || ""}
+                    onChange={(e) => setForm({ ...form, _galleryImageUrl: e.target.value })}
+                    className="border-gray-800 bg-black text-sm"
+                    placeholder="Paste image URL or Google Drive link"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = (form as any)._galleryImageUrl;
+                        if (url) {
+                          const current = Array.isArray((form as any).galleryImages) ? (form as any).galleryImages : [];
+                          setForm({
+                            ...form,
+                            galleryImages: [...current, url],
+                            _galleryImageUrl: "",
+                          });
+                        }
+                      }}
+                      className="flex-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium"
+                    >
+                      Add Image
+                    </button>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          const reader = new FileReader();
+                          reader.onload = async () => {
+                            const dataUrl = String(reader.result || "");
+                            const res = await fetchWithAuth<{
+                              success: boolean;
+                              data?: { url?: string };
+                              message?: string;
+                            }>(token, "/api/media", {
+                              method: "POST",
+                              body: JSON.stringify({
+                                data: dataUrl,
+                                filename: file.name,
+                                title: form.title || file.name,
+                                alt: "Gallery image",
+                              }),
+                            });
+                            if (res?.success && res.data?.url) {
+                              const current = Array.isArray((form as any).galleryImages)
+                                ? (form as any).galleryImages
+                                : [];
+                              setForm({
+                                ...form,
+                                galleryImages: [...current, res.data.url],
+                              });
+                            } else {
+                              setError(res?.message || "Upload failed");
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : "Upload failed");
+                        }
+                      }}
+                      className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium cursor-pointer"
+                      style={{ appearance: "none" }}
+                    />
+                    <label htmlFor="gallery-upload" className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium cursor-pointer text-center">
+                      Upload
+                    </label>
+                  </div>
+                </div>
+              </div>
             </FormField>
             <FormField label="Status">
               <Select
@@ -305,7 +573,7 @@ function AdminPortfolio() {
             <Button
               onClick={handleSave}
               disabled={isSaving}
-              className="w-full bg-[var(--brand-red)] hover:brightness-110"
+              className="w-full btn-primary"
             >
               {isSaving ? "Saving..." : editing ? "Update Project" : "Create Project"}
             </Button>
@@ -324,3 +592,6 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
     </div>
   );
 }
+
+
+

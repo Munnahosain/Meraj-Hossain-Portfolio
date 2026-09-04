@@ -39,6 +39,7 @@ export interface WebsiteSettingsData {
     description: string;
     backgroundImage: string;
     profileImage: string;
+    reelImages: string[];
     resumePdf: string;
     resumeButtonText: string;
     hireMeButtonText: string;
@@ -127,6 +128,7 @@ const websiteSettingsSchema = new Schema<IWebsiteSettings>(
       description: String,
       backgroundImage: String,
       profileImage: String,
+      reelImages: [String],
       resumePdf: String,
       resumeButtonText: { type: String, default: "Download Resume" },
       hireMeButtonText: { type: String, default: "Hire Me" },

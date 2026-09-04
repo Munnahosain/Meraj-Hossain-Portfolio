@@ -1,30 +1,42 @@
 import { connectDB } from "~/server/utils/db";
-import { requireAdminEmail } from "~/server/utils/auth";
+import { getAllowedAdminEmails, requireAdminEmail } from "~/server/utils/auth";
 import { User } from "~/server/models/User";
 
 export default defineEventHandler(async (event) => {
   try {
     await connectDB();
 
-    const user = await requireAdminEmail(event);
+    const user = await requireAuth(event);
+    const allowedEmails = getAllowedAdminEmails();
 
-    // Fetch full user data
+    if (!allowedEmails.length || !allowedEmails.includes(user.email?.trim().toLowerCase())) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: "Access Denied - Admin email not authorized",
+      });
+    }
+
     const fullUser = await User.findById(user.id);
 
-    if (!fullUser) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: "User not found",
-      });
+    if (fullUser) {
+      return {
+        success: true,
+        user: {
+          id: fullUser._id,
+          email: fullUser.email,
+          name: fullUser.name,
+          picture: fullUser.picture,
+        },
+      };
     }
 
     return {
       success: true,
       user: {
-        id: fullUser._id,
-        email: fullUser.email,
-        name: fullUser.name,
-        picture: fullUser.picture,
+        id: user.id,
+        email: user.email,
+        name: user.name || "Admin",
+        picture: user.picture || "",
       },
     };
   } catch (error) {

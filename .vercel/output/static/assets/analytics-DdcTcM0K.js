@@ -1,0 +1,1 @@
+import{l as e}from"./index-CSDKWzZE.js";import{t}from"./ComingSoon-BqNeIUcl.js";var n=e(),r=`E:/Web/creative-canvas-hub-main/creative-canvas-hub-main/src/routes/admin/_layout/analytics.tsx?tsr-split=component`,i=()=>(0,n.jsxDEV)(t,{title:`Analytics`},void 0,!1,{fileName:r,lineNumber:2,columnNumber:30},void 0);export{i as component};

@@ -15,7 +15,12 @@ export const Route = createFileRoute("/api/settings")({
 
           if (!settings) {
             settings = {
-              branding: { websiteName: "Meraj Hossain", browserTitle: "Meraj Hossain" },
+              branding: {
+                websiteName: "Meraj Hossain",
+                browserTitle: "Meraj Hossain",
+                websiteLogo: "/MCU-LOGO-0.2V-1.png",
+                footerLogo: "/MCU-LOGO-0.2V-1.png",
+              },
               general: {
                 ownerName: "Meraj Hossain",
                 profession: "Graphics Designer & Motion Artist",
@@ -24,6 +29,7 @@ export const Route = createFileRoute("/api/settings")({
               social: {},
               hero: {
                 title: "Meraj Hossain",
+                reelImages: [],
                 subtitle: "Graphics Designer · Video Editor · Motion Artist",
               },
               about: { title: "About Meraj" },

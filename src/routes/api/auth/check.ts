@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { getAllowedAdminEmails } from "../../../../server/utils/auth";
 import { extractTokenFromHeader, verifyToken } from "../../../../server/utils/jwt";
 
 export const Route = createFileRoute("/api/auth/check")({
@@ -16,9 +17,9 @@ export const Route = createFileRoute("/api/auth/check")({
         }
 
         const payload = verifyToken(token);
-        const allowedEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+        const allowedEmails = getAllowedAdminEmails().map((email) => email.trim().toLowerCase());
 
-        if (!payload || payload.email !== allowedEmail) {
+        if (!payload || !allowedEmails.includes(payload.email.trim().toLowerCase())) {
           return Response.json(
             { success: false, message: "Unauthorized - Invalid token" },
             { status: 401 },

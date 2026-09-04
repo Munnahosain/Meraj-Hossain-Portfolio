@@ -1,0 +1,1 @@
+var e=`/assets/meraj-CeURCLhN.jpg`;export{e as t};
