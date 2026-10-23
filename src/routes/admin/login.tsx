@@ -14,14 +14,6 @@ function AdminLogin() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const adminEmail =
-    import.meta.env.VITE_ADMIN_EMAIL ||
-    import.meta.env.VITE_DEV_ADMIN_EMAIL ||
-    "admin@example.com";
-  const adminPassword =
-    import.meta.env.VITE_ADMIN_PASS ||
-    import.meta.env.VITE_DEV_ADMIN_PASS ||
-    "Password123!";
 
   useEffect(() => {
     // If already logged in, redirect to dashboard
@@ -99,7 +91,7 @@ function AdminLogin() {
 
   const handleForgotPassword = () => {
     setError("");
-    setInfo("Forgot password? Ask the site owner/developer to reset the admin password.");
+    setInfo("For local access, check ADMIN_EMAIL and ADMIN_PASSWORD in .env.");
   };
 
   return (
@@ -112,21 +104,6 @@ function AdminLogin() {
 
         <div className="bg-gray-950 border border-gray-800 rounded-lg p-8">
           <form onSubmit={handlePasswordLogin} className="space-y-4 mb-6">
-            {(import.meta.env.DEV || import.meta.env.VITE_SHOW_DEV_CREDS) && (
-              <div className="rounded-2xl border border-gray-800 bg-gray-950 p-4 mb-4">
-                <div className="text-xs uppercase tracking-[0.35em] text-gray-500 mb-3">
-                  Admin credentials
-                </div>
-                <div className="grid gap-2 text-sm text-gray-300">
-                  <div>
-                    <span className="font-semibold text-white">Email:</span> {adminEmail}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-white">Password:</span> {adminPassword}
-                  </div>
-                </div>
-              </div>
-            )}
             <div>
               <label className="block text-sm text-gray-400 mb-2" htmlFor="admin-email">
                 Email
@@ -173,58 +150,6 @@ function AdminLogin() {
               {isSubmitting ? "Signing in..." : "Sign in"}
             </button>
           </form>
-
-          {/* Dev helper: autofill demo credentials and quick-login (visible in development or when VITE_SHOW_DEV_CREDS is set) */}
-          {(import.meta.env.DEV || import.meta.env.VITE_SHOW_DEV_CREDS) && (
-           <div className="mb-4 text-sm text-gray-400">
-             <div className="mb-2">Dev credentials available:</div>
-             <div className="flex gap-2">
-               <button
-                 type="button"
-                 onClick={() => {
-                   const devEmail = import.meta.env.VITE_DEV_ADMIN_EMAIL || adminEmail;
-                   const devPass = import.meta.env.VITE_DEV_ADMIN_PASS || adminPassword;
-                   setEmail(devEmail);
-                   setPassword(devPass);
-                 }}
-                 className="px-3 py-2 bg-gray-800 text-white rounded-md hover:brightness-110 transition-colors"
-               >
-                 Fill demo creds
-               </button>
-               <button
-                 type="button"
-                 onClick={async () => {
-                   const devEmail = import.meta.env.VITE_DEV_ADMIN_EMAIL || adminEmail;
-                   const devPass = import.meta.env.VITE_DEV_ADMIN_PASS || adminPassword;
-                   setEmail(devEmail);
-                   setPassword(devPass);
-                   setIsSubmitting(true);
-                   try {
-                     const resp = await fetch("/api/auth/login", {
-                       method: "POST",
-                       headers: { "Content-Type": "application/json" },
-                       body: JSON.stringify({ email: devEmail, password: devPass }),
-                     });
-                     const resJson = await resp.json();
-                     if (resp.ok && resJson.success) {
-                       setToken(resJson.token);
-                       navigate({ to: "/admin" });
-                     } else {
-                       setError(resJson.message || "Auto-login failed");
-                     }
-                   } catch (e) {
-                     setError("Auto-login failed: " + String(e));
-                   } finally {
-                     setIsSubmitting(false);
-                   }
-                 }}
-                 className="px-3 py-2 bg-[var(--brand-red)] text-white rounded-md hover:brightness-110 transition-colors"
-               >
-                 Auto login (dev)
-               </button>
-             </div>
-           </div>
-          )}
 
           <div className="flex items-center gap-3 mb-6">
             <div className="h-px flex-1 bg-gray-800" />
