@@ -31,11 +31,18 @@ export function ScrollReveal({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      setIsVisible(true);
+      return;
+    }
+
+    let visibilityTimeout: ReturnType<typeof setTimeout> | undefined;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setTimeout(() => setIsVisible(true), delay);
+          visibilityTimeout = setTimeout(() => setIsVisible(true), delay);
           observer.unobserve(el);
         }
       },
@@ -43,7 +50,10 @@ export function ScrollReveal({
     );
 
     observer.observe(el);
-    return () => observer.unobserve(el);
+    return () => {
+      observer.unobserve(el);
+      if (visibilityTimeout) clearTimeout(visibilityTimeout);
+    };
   }, [delay]);
 
   if (stagger) {
@@ -59,7 +69,6 @@ export function ScrollReveal({
                 opacity: isVisible ? 1 : 0,
                 transform: isVisible ? "translateY(0)" : "translateY(32px)",
                 transition: `opacity 0.9s cubic-bezier(0.16,1,0.3,1) ${delay + i * staggerMs}ms, transform 0.9s cubic-bezier(0.16,1,0.3,1) ${delay + i * staggerMs}ms`,
-                willChange: "opacity, transform",
               }}
             >
               {child}

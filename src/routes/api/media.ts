@@ -3,7 +3,12 @@ import { connectDB } from "../../../server/utils/db";
 import { Media } from "../../../server/models/Media";
 import { extractTokenFromHeader, verifyToken } from "../../../server/utils/jwt";
 import { parseMediaUrl } from "../../../server/utils/media-helper";
-import { uploadToCloudinary } from "../../../server/utils/cloudinary";
+import {
+  getImageUploadLimit,
+  R2StorageError,
+  uploadImageToR2,
+  validateImageUpload,
+} from "../../../server/utils/r2";
 
 export const Route = createFileRoute("/api/media")({
   server: {
@@ -33,37 +38,108 @@ export const Route = createFileRoute("/api/media")({
             return Response.json({ success: false, message: "Unauthorized" }, { status: 401 });
           }
 
-          await connectDB();
-          const body = await request.json().catch(() => ({}));
-          const { url, title, alt, data, filename } = body as any;
-
-          // If client sent base64 data (data URL), upload to Cloudinary
-          if (data) {
-            const match = String(data).match(/^data:(.+);base64,(.+)$/);
-            if (!match) {
-              return Response.json({ success: false, message: "Invalid data format" }, { status: 400 });
+          if (request.headers.get("content-type")?.includes("multipart/form-data")) {
+            const maxSize = getImageUploadLimit();
+            const declaredSize = Number(request.headers.get("content-length"));
+            if (Number.isFinite(declaredSize) && declaredSize > maxSize + 1024 * 1024) {
+              return Response.json(
+                {
+                  success: false,
+                  message: `Image exceeds the ${(maxSize / (1024 * 1024)).toFixed(1)} MB upload limit.`,
+                },
+                { status: 413 },
+              );
             }
 
-            const mime = match[1];
-            const b64 = match[2];
-            const buffer = Buffer.from(b64, "base64");
+            const formData = await request.formData();
+            const file = formData.get("file");
 
-            const result: any = await uploadToCloudinary(buffer, filename || title || `upload-${Date.now()}`);
+            if (!(file instanceof File)) {
+              return Response.json(
+                { success: false, message: "An image file is required." },
+                { status: 400 },
+              );
+            }
+
+            if (file.size === 0) {
+              return Response.json(
+                { success: false, message: "The uploaded image is empty." },
+                { status: 400 },
+              );
+            }
+            if (file.size > maxSize) {
+              return Response.json(
+                {
+                  success: false,
+                  message: `Image exceeds the ${(maxSize / (1024 * 1024)).toFixed(1)} MB upload limit.`,
+                },
+                { status: 413 },
+              );
+            }
+
+            const buffer = Buffer.from(await file.arrayBuffer());
+            const validatedImage = validateImageUpload(file.type, buffer);
+            await connectDB();
+
+            const uploaded = await uploadImageToR2(
+              buffer,
+              validatedImage.mimeType,
+              validatedImage.extension,
+            );
+            const originalName =
+              Array.from(file.name.split(/[\\/]/).pop() || "")
+                .filter(
+                  (character) => character.charCodeAt(0) >= 32 && character.charCodeAt(0) !== 127,
+                )
+                .join("")
+                .slice(0, 180) || "image";
+            const title = String(formData.get("title") || originalName).slice(0, 180);
+            const altText = String(formData.get("alt") || "").slice(0, 500);
+            const folder = formData.get("folder") === "hero" ? "hero" : "portfolio";
 
             const newMedia = await Media.create({
-              fileName: result.public_id || title || filename || "upload",
-              originalName: title || filename || "upload",
-              url: result.secure_url,
-              mimeType: mime,
-              fileType: mime.startsWith("video/") ? "video" : "image",
-              size: result.bytes || buffer.length,
-              altText: alt || title || "",
-              tags: [mime.startsWith("video/") ? "video" : "image"],
+              name: title,
+              fileName: originalName,
+              filename: uploaded.key,
+              originalName,
+              publicId: uploaded.key,
+              url: uploaded.url,
+              mimeType: file.type,
+              type: "image",
+              fileType: "image",
+              size: buffer.length,
+              folder,
+              altText,
+              tags: ["image", "r2"],
             });
 
-            return Response.json({ success: true, data: newMedia, message: "Upload successful" });
+            return Response.json({
+              success: true,
+              data: newMedia,
+              message: "Image uploaded successfully.",
+            });
           }
 
+          const body = await request.json().catch(() => ({}));
+          if (!body || typeof body !== "object" || Array.isArray(body)) {
+            return Response.json(
+              { success: false, message: "A JSON object is required." },
+              { status: 400 },
+            );
+          }
+          const { url, title, alt } = body as {
+            url?: string;
+            title?: string;
+            alt?: string;
+            data?: unknown;
+          };
+
+          if ("data" in body) {
+            return Response.json(
+              { success: false, message: "Upload image files using multipart form data." },
+              { status: 400 },
+            );
+          }
           if (!url) {
             return Response.json(
               { success: false, message: "Media URL is required" },
@@ -73,15 +149,21 @@ export const Route = createFileRoute("/api/media")({
 
           const parsed = parseMediaUrl(url);
 
+          const fileType = parsed.type;
+          const fileName = title || url.split("/").pop() || "media-item";
+
           const newMedia = await Media.create({
-            fileName: title || url.split("/").pop() || "media-item",
+            name: title || fileName,
+            fileName,
+            filename: fileName,
             originalName: title || "media-item",
             url: parsed.originalUrl,
             mimeType: parsed.type,
-            fileType: parsed.type,
+            type: fileType,
+            fileType,
             size: 0,
             altText: alt || title || "",
-            tags: [parsed.type],
+            tags: [fileType],
           });
 
           return Response.json({
@@ -91,7 +173,16 @@ export const Route = createFileRoute("/api/media")({
           });
         } catch (error) {
           console.error("API /api/media POST error:", error);
-          return Response.json({ success: false, message: "Failed to add media" }, { status: 500 });
+          if (error instanceof R2StorageError) {
+            return Response.json(
+              { success: false, message: error.message },
+              { status: error.status },
+            );
+          }
+          return Response.json(
+            { success: false, message: "Failed to add media. Check server logs for details." },
+            { status: 500 },
+          );
         }
       },
 

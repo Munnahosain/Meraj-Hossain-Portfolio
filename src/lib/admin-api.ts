@@ -16,21 +16,25 @@ export async function fetchWithAuth<T = unknown>(
   const headers = new Headers(options.headers);
   // Attach Bearer token when provided
   if (token) {
-    headers.set("Authorization", 'Bearer ' + token);
+    headers.set("Authorization", "Bearer " + token);
   }
 
-  if (options.body && !headers.has("Content-Type")) {
+  if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
   const response = await fetch(url, { ...options, headers });
-  const result = await response.json().catch(() => ({}));
+  const parsedResult: unknown = await response.json().catch(() => ({}));
+  const result =
+    parsedResult && typeof parsedResult === "object" && !Array.isArray(parsedResult)
+      ? (parsedResult as Record<string, unknown>)
+      : {};
 
-  if (!response.ok || (result && (result as any).success === false)) {
-    throw new AdminApiError(
-      (result && ((result as any).message || (result as any).error || (result as any).statusMessage)) || "Request failed",
-      response.status,
+  if (!response.ok || result.success === false) {
+    const message = [result.message, result.error, result.statusMessage].find(
+      (value): value is string => typeof value === "string",
     );
+    throw new AdminApiError(message || "Request failed", response.status);
   }
 
   return result as T;

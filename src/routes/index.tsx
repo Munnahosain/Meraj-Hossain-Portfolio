@@ -10,6 +10,7 @@ import reel5 from "@/assets/reel-05.jpg";
 import reel6 from "@/assets/reel-06.jpg";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { InteractiveJ } from "@/components/Hero/InteractiveJ";
+import { getImageSrc } from "@/lib/utils";
 import {
   useWebsiteSettings,
   useCMSProjects,
@@ -181,7 +182,7 @@ function Index() {
         {/* 3D Sandwich Name Container */}
         <div className="hero-title-wrap relative flex flex-col items-center justify-center my-6 md:my-10 w-full select-none">
           {/* Back Layer: First Name */}
-          <h1 className="font-display uppercase leading-[0.9] tracking-tight text-center relative z-10 hero-name hero-first" style={{ fontSize: "clamp(3.5rem, 16vw, 16rem)" }}>
+          <h1 className="font-display uppercase leading-[0.9] tracking-tight text-center relative z-10 hero-name hero-first" style={{ fontSize: "clamp(2.5rem, 16vw, 16rem)" }}>
             <span className="block">
               {firstName}
             </span>
@@ -193,14 +194,14 @@ function Index() {
           {/* Middle Layer: Portrait */}
           <div className="absolute top-[48%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[280px] sm:max-w-[360px] md:max-w-[440px] aspect-square flex items-center justify-center z-20 hero-portrait">
             <img
-              src={heroImage}
+              src={getImageSrc(heroImage)}
               alt={`${heroTitle} Portrait`}
               className="h-[105%] md:h-[115%] w-auto object-contain object-center transition-transform duration-700 ease-out will-change-transform"
             />
           </div>
 
           {/* Front Layer: Last Name */}
-          <h1 className="font-display uppercase leading-[0.9] tracking-tight text-center relative z-30 hero-name hero-last" style={{ fontSize: "clamp(3.5rem, 15vw, 15rem)" }}>
+          <h1 className="font-display uppercase leading-[0.9] tracking-tight text-center relative z-30 hero-name hero-last" style={{ fontSize: "clamp(2.5rem, 15vw, 15rem)" }}>
             <span className="block">
               {lastName}
             </span>
@@ -209,7 +210,7 @@ function Index() {
 
         {/* Marquee */}
         <div className="hero-marquee mt-12">
-          <ReelMarquee />
+          <ReelMarquee images={settings?.hero?.reelImages} />
         </div>
 
         {/* Bottom descriptor row */}
@@ -229,7 +230,7 @@ function Index() {
             </div>
             <div className="relative aspect-[3/4] overflow-hidden bg-neutral-900 border border-white/10 max-w-xs section-image-card">
               <img
-                src={aboutImage}
+                src={getImageSrc(aboutImage)}
                 alt="Portrait"
                 className="w-full h-full object-cover grayscale-[20%]"
               />
@@ -278,17 +279,22 @@ function Index() {
           </div>
           <div className="grid md:grid-cols-2 gap-8 md:gap-16">
             {displayProjects.map((p: any, i: number) => (
-              <div
+              <Link
                 key={p.title + i}
-                className={`project-card group cursor-pointer ${i % 2 === 1 ? "md:mt-24" : ""}`}
+                to={p.id ? "/project" : "/projects"}
+                search={p.id ? { id: p.id } : undefined}
+                className={`project-card group block ${i % 2 === 1 ? "md:mt-24" : ""}`}
               >
                 <div className="relative aspect-[4/5] overflow-hidden card border border-white/5 project-card-inner">
                   <img
-                    src={p.img}
+                    src={getImageSrc(p.img)}
                     alt={p.title}
                     width={800}
                     height={1000}
                     loading="lazy"
+                    onError={(event) => {
+                      event.currentTarget.src = reel1;
+                    }}
                     className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity" />
@@ -305,7 +311,7 @@ function Index() {
                   </h3>
                   <span className="font-mono text-xs text-white/40">{p.year}</span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </ScrollReveal>
@@ -471,4 +477,3 @@ function Index() {
     </SiteChrome>
   );
 }
-

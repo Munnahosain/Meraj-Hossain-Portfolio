@@ -8,6 +8,14 @@ const getBreakpoint = (width: number): Breakpoint => {
   return "desktop";
 };
 
+const initialOffsets = [
+  { x: -48, y: -42 },
+  { x: 42, y: -34 },
+  { x: 10, y: 18 },
+  { x: -42, y: 44 },
+  { x: 44, y: 10 },
+];
+
 export function InteractiveJ() {
   const [breakpoint, setBreakpoint] = useState<Breakpoint>(() =>
     typeof window !== "undefined" ? getBreakpoint(window.innerWidth) : "desktop",
@@ -46,14 +54,6 @@ export function InteractiveJ() {
       }),
     ]);
 
-    const initialOffsets = [
-      { x: -48, y: -42 },
-      { x: 42, y: -34 },
-      { x: 10, y: 18 },
-      { x: -42, y: 44 },
-      { x: 44, y: 10 },
-    ];
-
     const iconBodies = icons.map((icon, index) => {
       const size = icon.positions[breakpoint].size;
       const offset = initialOffsets[index] ?? { x: 0, y: 0 };
@@ -84,23 +84,49 @@ export function InteractiveJ() {
     World.add(world, mouseConstraint);
 
     const runner = Runner.create();
-    Runner.run(runner, engine);
+    const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let isIntersecting = false;
+    let isRunning = false;
+    const syncRunner = () => {
+      const shouldRun = isIntersecting && !document.hidden && !motionPreference.matches;
+      if (shouldRun === isRunning) return;
+      isRunning = shouldRun;
+      if (shouldRun) {
+        Runner.run(runner, engine);
+      } else {
+        Runner.stop(runner);
+      }
+    };
 
-    Events.on(engine, "afterUpdate", () => {
+    const renderIcons = () => {
       iconBodies.forEach(({ body, el }) => {
         if (!el) return;
         el.style.left = `${body.position.x}px`;
         el.style.top = `${body.position.y}px`;
         el.style.transform = `translate(-50%, -50%) rotate(${body.angle}rad)`;
       });
+    };
+    Events.on(engine, "afterUpdate", renderIcons);
+
+    const intersectionObserver = new IntersectionObserver(([entry]) => {
+      isIntersecting = entry.isIntersecting;
+      syncRunner();
     });
+    intersectionObserver.observe(stage);
+    const handleVisibilityChange = () => syncRunner();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    motionPreference.addEventListener("change", syncRunner);
 
     mouse.element.removeEventListener("mousewheel", mouse.mousewheel);
     mouse.element.removeEventListener("DOMMouseScroll", mouse.mousewheel);
 
     return () => {
-      Events.off(engine, "afterUpdate");
+      intersectionObserver.disconnect();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      motionPreference.removeEventListener("change", syncRunner);
+      Events.off(engine, "afterUpdate", renderIcons);
       Runner.stop(runner);
+      Mouse.clear(mouse);
       World.remove(world, mouseConstraint);
       World.clear(world, false);
       Engine.clear(engine);
@@ -109,7 +135,7 @@ export function InteractiveJ() {
 
   return (
     <div className="physics-stage" ref={stageRef}>
-      {icons.map((icon) => (
+      {icons.map((icon, index) => (
         <div
           key={icon.id}
           ref={(element) => {
@@ -119,6 +145,8 @@ export function InteractiveJ() {
           style={{
             width: icon.positions[breakpoint].size,
             height: icon.positions[breakpoint].size,
+            left: `calc(50% + ${(initialOffsets[index] ?? { x: 0 }).x}px)`,
+            top: `calc(50% + ${(initialOffsets[index] ?? { y: 0 }).y - 20}px)`,
             zIndex: icon.zIndex,
           }}
           aria-label={icon.label}

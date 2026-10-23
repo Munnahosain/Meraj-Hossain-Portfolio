@@ -63,7 +63,9 @@ const emptyProject = (): Omit<Project, "_id"> => ({
 
 // Helpers to generate preview thumbnails for common link types
 function extractYouTubeId(url: string): string | null {
-  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+  const match = url.match(
+    /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/,
+  );
   return match ? match[1] : null;
 }
 
@@ -74,7 +76,10 @@ function getYouTubeThumb(url: string) {
 
 function extractGoogleDriveId(url: string): string | null {
   if (!url) return null;
-  const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  const match =
+    url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+    url.match(/id=([a-zA-Z0-9_-]+)/) ||
+    url.match(/\/d\/([a-zA-Z0-9_-]+)/);
   return match ? match[1] : null;
 }
 
@@ -93,6 +98,7 @@ function AdminPortfolio() {
   const [form, setForm] = useState(emptyProject());
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -293,51 +299,68 @@ function AdminPortfolio() {
                 onChange={(e) => setForm({ ...form, thumbnail: e.target.value })}
                 className="border-gray-800 bg-black"
               />
-              <div className="mt-2 text-xs text-gray-400">Or upload a file</div>
+              <div className="mt-2 text-xs text-gray-400">Or upload an image to Cloudflare R2</div>
               <input
                 type="file"
-                accept="image/*,video/*"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                disabled={isUploadingThumbnail}
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
+                  e.currentTarget.value = "";
                   if (!file) return;
+                  setIsUploadingThumbnail(true);
+                  setError("");
                   try {
-                    const reader = new FileReader();
-                    reader.onload = async () => {
-                      const dataUrl = String(reader.result || "");
-                      // Upload to server
-                      const res = await fetch("/api/media", {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                          ...(token ? { Authorization: 'Bearer ' + token } : {}),
-                        },
-                        body: JSON.stringify({ data: dataUrl, filename: file.name, title: form.title, alt: form.shortDescription }),
-                      });
-                      const json = await res.json().catch(() => ({}));
-                      if (json.success && json.data) {
-                        setForm({ ...form, thumbnail: json.data.url });
-                      } else {
-                        setError(json.message || "Upload failed");
-                      }
-                    };
-                    reader.readAsDataURL(file);
+                    const formData = new FormData();
+                    formData.set("file", file);
+                    formData.set("title", form.title || file.name);
+                    formData.set("alt", form.shortDescription);
+                    formData.set("folder", "portfolio");
+                    const result = await fetchWithAuth<{
+                      data?: { url?: string };
+                    }>(token, "/api/media", {
+                      method: "POST",
+                      body: formData,
+                    });
+                    const imageUrl = result.data?.url;
+                    if (!imageUrl) {
+                      throw new Error("The upload completed without returning an image URL.");
+                    }
+                    setForm((current) => ({ ...current, thumbnail: imageUrl }));
                   } catch (err) {
                     setError(err instanceof Error ? err.message : "Upload failed");
+                  } finally {
+                    setIsUploadingThumbnail(false);
                   }
                 }}
                 className="mt-2 text-sm text-white"
               />
+              {isUploadingThumbnail && (
+                <div className="mt-1 text-xs text-gray-400">Uploading image...</div>
+              )}
               {form.thumbnail ? (
                 <div className="mt-3">
                   <div className="text-xs text-gray-400 mb-1">Preview</div>
                   <div className="w-40 h-24 bg-neutral-900 border border-gray-800 overflow-hidden rounded">
-                    {/* Attempt to render image/video thumbnail */}
-                    {form.thumbnail.includes("youtube.com") || form.thumbnail.includes("youtu.be") ? (
-                      <img src={getYouTubeThumb(form.thumbnail)} alt="preview" className="w-full h-full object-cover" />
+                    {form.thumbnail.includes("youtube.com") ||
+                    form.thumbnail.includes("youtu.be") ? (
+                      <img
+                        src={getYouTubeThumb(form.thumbnail)}
+                        alt="preview"
+                        className="w-full h-full object-cover"
+                      />
                     ) : form.thumbnail.includes("drive.google.com") ? (
-                      <img src={getDriveThumb(form.thumbnail)} alt="preview" className="w-full h-full object-cover" />
+                      <img
+                        src={getDriveThumb(form.thumbnail)}
+                        alt="preview"
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
-                      <img src={form.thumbnail} alt="preview" className="w-full h-full object-cover" />
+                      <img
+                        src={form.thumbnail}
+                        alt="preview"
+                        className="w-full h-full object-cover"
+                      />
                     )}
                   </div>
                 </div>
@@ -373,11 +396,7 @@ function AdminPortfolio() {
                 <Label className="text-gray-400">Hidden</Label>
               </div>
             </div>
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="w-full btn-primary"
-            >
+            <Button onClick={handleSave} disabled={isSaving} className="w-full btn-primary">
               {isSaving ? "Saving..." : editing ? "Update Project" : "Create Project"}
             </Button>
           </div>
@@ -395,6 +414,3 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
     </div>
   );
 }
-
-
-

@@ -1,5 +1,12 @@
 import { v2 as cloudinary } from "cloudinary";
 
+const hasCloudinaryConfig = () =>
+  Boolean(
+    process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET,
+  );
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -13,6 +20,7 @@ export interface UploadOptions {
   height?: number;
   crop?: string;
   quality?: string;
+  mimeType?: string;
 }
 
 export async function uploadToCloudinary(
@@ -20,6 +28,16 @@ export async function uploadToCloudinary(
   filename: string,
   options: UploadOptions = {},
 ) {
+  if (!hasCloudinaryConfig()) {
+    const mimeType = options.mimeType || "application/octet-stream";
+    return {
+      public_id: filename,
+      secure_url: `data:${mimeType};base64,${fileBuffer.toString("base64")}`,
+      bytes: fileBuffer.length,
+      resource_type: mimeType.startsWith("video/") ? "video" : "image",
+    };
+  }
+
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {

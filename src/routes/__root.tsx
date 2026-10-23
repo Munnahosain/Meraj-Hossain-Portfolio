@@ -143,6 +143,7 @@ function RootComponent() {
     }
 
     document.body.style.overflow = "";
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const lenisInstance = new Lenis({
       duration: 1.2,
@@ -152,17 +153,35 @@ function RootComponent() {
       smoothWheel: true,
     });
 
-    let rafId: number;
+    let rafId: number | undefined;
     const raf = (time: number) => {
+      rafId = undefined;
+      if (document.hidden) return;
       lenisInstance.raf(time);
       rafId = requestAnimationFrame(raf);
     };
 
+    const startAnimationFrame = () => {
+      if (!document.hidden && rafId === undefined) {
+        rafId = requestAnimationFrame(raf);
+      }
+    };
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (rafId !== undefined) cancelAnimationFrame(rafId);
+        rafId = undefined;
+      } else {
+        startAnimationFrame();
+      }
+    };
+
     rafId = requestAnimationFrame(raf);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       lenisInstance.destroy();
-      cancelAnimationFrame(rafId);
+      if (rafId !== undefined) cancelAnimationFrame(rafId);
     };
   }, [isLoaded, isAdminRoute]);
 
@@ -177,4 +196,3 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
-

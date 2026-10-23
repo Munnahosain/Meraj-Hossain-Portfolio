@@ -261,6 +261,37 @@
   overflow: hidden;
 }
 
+@media (max-width: 767px) {
+  .hero-meta {
+    margin-bottom: 2rem;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+  }
+
+  .hero-title-wrap {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .hero-marquee {
+    margin-top: 2rem;
+  }
+
+  .hero-copy {
+    margin-top: 2rem;
+  }
+
+  .section-block {
+    padding-top: 5rem;
+    padding-bottom: 5rem;
+  }
+
+  .section-header {
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+}
+
 .hero-meta {
   opacity: 0;
   transform: translateY(30px);
@@ -576,12 +607,12 @@
   z-index: 0;
 }
 .side-highlight-left {
-  left: 20;
+  left: 20px;
   background: linear-gradient(180deg, rgba(25,194,130,0.92), rgba(25,194,130,0.18) 35%, transparent 70%);
   box-shadow: 0 0 60px rgba(25,194,130,0.18);
 }
 .side-highlight-right {
-  right: 20;
+  right: 20px;
   background: linear-gradient(180deg, rgba(25,194,130,0.92), rgba(25,194,130,0.18) 35%, transparent 70%);
   box-shadow: 0 0 60px rgba(25,194,130,0.18);
 }
@@ -604,8 +635,35 @@
   box-shadow: 0 10px 30px rgba(9,60,45,0.4);
 }
 
-a { color: var(--primary); transition: color 200ms ease; text-decoration: none; }
-a:hover { color: var(--accent); text-decoration: underline; }
+a { color: inherit; transition: color 200ms ease; text-decoration: none; }
+a:hover { color: var(--accent); text-decoration: none; }
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.nav-link:hover {
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.nav-link:focus-visible,
+.nav-menu-toggle:focus-visible {
+  outline: 1px solid var(--primary);
+  outline-offset: 4px;
+  box-shadow: none;
+}
+
+.nav-menu-toggle svg {
+  fill: none;
+}
+
+.mobile-navigation {
+  background: rgba(4, 10, 7, 0.96);
+  backdrop-filter: blur(16px);
+}
 
 /* Focus styles for accessibility */
 :focus {
@@ -681,18 +739,8 @@ h1, h2, h3 { letter-spacing: -0.02em; }
 /* Ensure SVG icons render and inherit color */
 svg {
   color: currentColor;
-  fill: currentColor;
-  stroke: currentColor;
   display: inline-block;
   vertical-align: middle;
-}
-
-/* Gentle image hover for interactive elements */
-img {
-  transition: transform 360ms cubic-bezier(0.22,1,0.36,1), filter 360ms ease;
-}
-img:hover {
-  transform: translateY(-6px) scale(1.01);
 }
 
 /* Small lift for interactive elements like cards and buttons */
@@ -730,3 +778,24 @@ img:hover {
   transition: opacity 1.0s cubic-bezier(0.22,1,0.36,1), transform 1.0s cubic-bezier(0.22,1,0.36,1);
 }
 
+@media (max-width: 767px) {
+  body {
+    background-attachment: scroll;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .scroll-reveal {
+    opacity: 1;
+    transform: none;
+  }
+}

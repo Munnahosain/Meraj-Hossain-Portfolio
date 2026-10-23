@@ -14,23 +14,34 @@ export function Preloader({ onComplete }: PreloaderProps) {
   }, [onComplete]);
 
   useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      onCompleteRef.current();
+      return;
+    }
+
     const duration = 1200; // 1.2 seconds
     const startTime = performance.now();
     let animationFrameId: number;
+    let completionTimeoutId: ReturnType<typeof setTimeout> | undefined;
+    let fadeTimeoutId: ReturnType<typeof setTimeout> | undefined;
+    let lastCount = -1;
 
     const updateCounter = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min((elapsed / duration) * 100, 100);
       const rounded = Math.round(progress);
 
-      setCount(rounded);
+      if (rounded !== lastCount) {
+        lastCount = rounded;
+        setCount(rounded);
+      }
 
       if (progress < 100) {
         animationFrameId = requestAnimationFrame(updateCounter);
       } else {
-        setTimeout(() => {
+        completionTimeoutId = setTimeout(() => {
           setIsFadingOut(true);
-          setTimeout(() => {
+          fadeTimeoutId = setTimeout(() => {
             onCompleteRef.current();
           }, 600);
         }, 200);
@@ -41,6 +52,8 @@ export function Preloader({ onComplete }: PreloaderProps) {
 
     return () => {
       cancelAnimationFrame(animationFrameId);
+      if (completionTimeoutId) clearTimeout(completionTimeoutId);
+      if (fadeTimeoutId) clearTimeout(fadeTimeoutId);
     };
   }, []);
 

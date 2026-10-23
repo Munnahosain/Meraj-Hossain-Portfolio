@@ -7,6 +7,7 @@ import reel3 from "@/assets/reel-03.jpg";
 import reel4 from "@/assets/reel-04.jpg";
 import reel5 from "@/assets/reel-05.jpg";
 import reel6 from "@/assets/reel-06.jpg";
+import { getImageSrc } from "@/lib/utils";
 
 export const Route = createFileRoute("/projects")({
   component: ProjectsPage,
@@ -99,9 +100,9 @@ function ProjectsPage() {
       </section>
       <section className="px-6 md:px-12 pb-32">
         <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-10 md:gap-20">
-          {displayProjects.map((p: any, i: number) => (
-            <Link key={(p.title || p.id) + i} to={`/project?id=${p.id}`} className={`group block ${i % 2 === 1 ? "md:mt-32" : ""}`}>
-              <article>
+          {displayProjects.map((p: any, i: number) => {
+            const card = (
+              <article className={`group block ${i % 2 === 1 ? "md:mt-32" : ""}`}>
                 <div className="relative aspect-[4/5] overflow-hidden bg-neutral-900 border border-white/5">
                   {p.mediaInfo?.youtubeEmbed ? (
                     <iframe
@@ -110,6 +111,7 @@ function ProjectsPage() {
                       className="w-full h-full object-cover border-0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
+                      loading="lazy"
                     />
                   ) : p.mediaInfo?.googleDriveEmbed ? (
                     <iframe
@@ -117,14 +119,18 @@ function ProjectsPage() {
                       title={p.title}
                       className="w-full h-full object-cover border-0"
                       allow="autoplay"
+                      loading="lazy"
                     />
                   ) : (
                     <img
-                      src={p.img}
+                      src={getImageSrc(p.img)}
                       alt={p.title}
                       width={800}
                       height={1000}
                       loading="lazy"
+                      onError={(event) => {
+                        event.currentTarget.src = reel1;
+                      }}
                       className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700"
                     />
                   )}
@@ -144,8 +150,21 @@ function ProjectsPage() {
                   <span className="font-mono text-xs text-white/40 shrink-0">{p.year}</span>
                 </div>
               </article>
-            </Link>
-          ))}
+            );
+
+            return p.id ? (
+              <Link
+                key={p.id}
+                to="/project"
+                search={{ id: p.id }}
+                className={`block ${i % 2 === 1 ? "md:mt-32" : ""}`}
+              >
+                {card}
+              </Link>
+            ) : (
+              <div key={(p.title || "project") + i}>{card}</div>
+            );
+          })}
         </div>
       </section>
     </SiteChrome>

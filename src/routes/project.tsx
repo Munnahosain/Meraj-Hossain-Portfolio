@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteChrome } from "@/components/SiteChrome";
 import { useEffect, useState } from "react";
+import { getImageSrc } from "@/lib/utils";
+import reel1 from "@/assets/reel-01.jpg";
 
 export const Route = createFileRoute("/project")({
   component: ProjectPage,
@@ -84,8 +86,11 @@ function ProjectPage() {
                 />
               ) : (
                 <img
-                  src={project.thumbnail}
+                  src={getImageSrc(project.thumbnail)}
                   alt={project.title}
+                  onError={(event) => {
+                    event.currentTarget.src = reel1;
+                  }}
                   className="w-full h-[480px] object-cover"
                 />
               )}
@@ -95,8 +100,15 @@ function ProjectPage() {
             <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4">
               {(project.galleryImages || []).map((img: string, i: number) => (
                 <div key={img + i} className="overflow-hidden rounded shadow-sm">
-                  <a href={img} target="_blank" rel="noreferrer">
-                    <img src={img} alt={`gallery-${i}`} className="w-full h-48 object-cover hover:scale-105 transition-transform duration-400" />
+                  <a href={getImageSrc(img)} target="_blank" rel="noreferrer">
+                    <img
+                      src={getImageSrc(img)}
+                      alt={`Gallery image ${i + 1}`}
+                      onError={(event) => {
+                        event.currentTarget.src = reel1;
+                      }}
+                      className="w-full h-48 object-cover hover:scale-105 transition-transform duration-400"
+                    />
                   </a>
                 </div>
               ))}

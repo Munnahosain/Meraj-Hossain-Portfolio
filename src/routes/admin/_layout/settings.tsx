@@ -11,19 +11,13 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_REEL_IMAGES } from "@/components/ReelMarquee";
+import { getImageSrc } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/_layout/settings")({
   component: AdminSettings,
 });
 
 type SettingsData = Record<string, Record<string, unknown>>;
-
-function getUploadImageSrc(src: string) {
-  if (src.startsWith("/uploads/")) {
-    return `/api/uploads/${encodeURIComponent(src.split("/").pop() || "")}`;
-  }
-  return src;
-}
 
 function AdminSettings() {
   const queryClient = useQueryClient();
@@ -122,12 +116,11 @@ function AdminSettings() {
     setIsUploadingReel(true);
     setError("");
     try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result || ""));
-        reader.onerror = () => reject(new Error("Failed to read file"));
-        reader.readAsDataURL(file);
-      });
+      const formData = new FormData();
+      formData.set("file", file);
+      formData.set("title", file.name);
+      formData.set("alt", "Hero reel image");
+      formData.set("folder", "hero");
 
       const result = await fetchWithAuth<{
         success: boolean;
@@ -135,12 +128,7 @@ function AdminSettings() {
         message?: string;
       }>(token, "/api/media", {
         method: "POST",
-        body: JSON.stringify({
-          data: dataUrl,
-          filename: file.name,
-          title: file.name,
-          alt: "Hero reel image",
-        }),
+        body: formData,
       });
 
       if (!result.data?.url) {
@@ -290,7 +278,11 @@ function AdminSettings() {
                   className="overflow-hidden rounded-lg border border-gray-800 bg-black"
                 >
                   <div className="aspect-[4/5] bg-neutral-950">
-                    <img src={getUploadImageSrc(src)} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={getImageSrc(src)}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
                   </div>
                   <div className="flex items-center justify-between gap-2 p-3">
                     <span className="truncate text-xs text-gray-500">Image {index + 1}</span>
@@ -347,7 +339,7 @@ function AdminSettings() {
                 {isUploadingReel ? "Uploading..." : "Upload"}
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
                   disabled={isUploadingReel}
                   className="sr-only"
                   onChange={(e) => {

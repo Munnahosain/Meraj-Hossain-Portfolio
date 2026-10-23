@@ -140,36 +140,41 @@ function ContactPage() {
 
           <form className="space-y-8" onSubmit={handleSubmit}>
             <div className="border-b border-white/20 focus-within:border-[var(--brand-red)] transition-colors pb-2">
-              <label className="font-mono text-[10px] uppercase tracking-widest text-white/40 block mb-2">
+              <label htmlFor="contact-name" className="font-mono text-[10px] uppercase tracking-widest text-white/40 block mb-2">
                 Name
               </label>
               <input
+                id="contact-name"
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full bg-transparent outline-none text-lg placeholder:text-white/20"
                 placeholder="Your name"
+                autoComplete="name"
               />
             </div>
             <div className="border-b border-white/20 focus-within:border-[var(--brand-red)] transition-colors pb-2">
-              <label className="font-mono text-[10px] uppercase tracking-widest text-white/40 block mb-2">
+              <label htmlFor="contact-email" className="font-mono text-[10px] uppercase tracking-widest text-white/40 block mb-2">
                 Email
               </label>
               <input
+                id="contact-email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-transparent outline-none text-lg placeholder:text-white/20"
                 placeholder="you@studio.com"
+                autoComplete="email"
               />
             </div>
             <div className="border-b border-white/20 focus-within:border-[var(--brand-red)] transition-colors pb-2">
-              <label className="font-mono text-[10px] uppercase tracking-widest text-white/40 block mb-2">
+              <label htmlFor="contact-project" className="font-mono text-[10px] uppercase tracking-widest text-white/40 block mb-2">
                 Project
               </label>
               <textarea
+                id="contact-project"
                 rows={4}
                 required
                 value={message}
@@ -181,6 +186,8 @@ function ContactPage() {
 
             {feedbackMsg && (
               <div
+                role="status"
+                aria-live="polite"
                 className={`p-4 font-mono text-xs uppercase tracking-widest ${status === "success" ? "bg-emerald-950/60 text-emerald-400 border border-emerald-800" : "bg-red-950/60 text-red-400 border border-red-800"}`}
               >
                 {feedbackMsg}

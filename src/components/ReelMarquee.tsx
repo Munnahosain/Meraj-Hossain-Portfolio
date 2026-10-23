@@ -7,6 +7,7 @@ import reel4 from "@/assets/reel-04.jpg";
 import reel5 from "@/assets/reel-05.jpg";
 import reel6 from "@/assets/reel-06.jpg";
 import reel7 from "@/assets/reel-07.jpg";
+import { getImageSrc } from "@/lib/utils";
 
 export const DEFAULT_REEL_IMAGES = [reel1, reel2, reel3, reel4, reel5, reel6, reel7];
 
@@ -17,13 +18,6 @@ const RIB_STRIP_W = RIB_COUNT * RIB_WIDTH;
 const R_LABEL = 5; // major tick every N ribs (used for ratio calc)
 const WHEEL_TICK = RIB_WIDTH; // px per "tick" for ratio math
 
-function getImageSrc(src: string) {
-  if (src.startsWith("/uploads/")) {
-    return `/api/uploads/${encodeURIComponent(src.split("/").pop() || "")}`;
-  }
-  return src;
-}
-
 // ─────────────────────────────────────────────────────────────────
 export function ReelMarquee({ images }: { images?: string[] }) {
   const activeShots = useMemo(
@@ -32,6 +26,7 @@ export function ReelMarquee({ images }: { images?: string[] }) {
   );
   const doubledShots = useMemo(() => [...activeShots, ...activeShots], [activeShots]);
 
+  const frameRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null); // image strip
   const rulerRef = useRef<HTMLDivElement>(null); // ruler strip
   const rulerWrapRef = useRef<HTMLDivElement>(null); // ruler container (for width)
@@ -50,6 +45,8 @@ export function ReelMarquee({ images }: { images?: string[] }) {
     lastT: 0,
     autoRaf: 0,
     glideRaf: 0,
+    inView: false,
+    reducedMotion: false,
   });
 
   // ── Paint DOM ──────────────────────────────────────────────────
@@ -72,30 +69,48 @@ export function ReelMarquee({ images }: { images?: string[] }) {
 
   // ── Auto-scroll (runs when idle) ───────────────────────────────
   const auto = useCallback(() => {
-    if (s.current.active) return;
-    s.current.offset += 1.0; // px / frame
+    const st = s.current;
+    st.autoRaf = 0;
+    if (st.active || !st.inView || st.reducedMotion || document.hidden) return;
+    st.offset += 1.0; // px / frame
     draw();
-    s.current.autoRaf = requestAnimationFrame(auto);
+    st.autoRaf = requestAnimationFrame(auto);
   }, [draw]);
+
+  const startAuto = useCallback(() => {
+    const st = s.current;
+    if (st.active || !st.inView || st.reducedMotion || document.hidden) return;
+    cancelAnimationFrame(st.glideRaf);
+    cancelAnimationFrame(st.autoRaf);
+    st.glideRaf = 0;
+    st.autoRaf = requestAnimationFrame(auto);
+  }, [auto]);
 
   // ── Momentum glide (runs after pointer release) ────────────────
   const glide = useCallback(() => {
     const st = s.current;
+    st.glideRaf = 0;
+    if (!st.inView || st.reducedMotion || document.hidden) {
+      startAuto();
+      return;
+    }
     st.vel *= 0.92;
     if (Math.abs(st.vel) < 0.3) {
-      st.autoRaf = requestAnimationFrame(auto);
+      startAuto();
       return;
     }
     st.offset -= st.vel;
     draw();
     st.glideRaf = requestAnimationFrame(glide);
-  }, [draw, auto]);
+  }, [draw, startAuto]);
 
   // ── Pointer down ───────────────────────────────────────────────
   const onDown = useCallback((e: React.PointerEvent, src: "img" | "ruler") => {
     const st = s.current;
     cancelAnimationFrame(st.autoRaf);
     cancelAnimationFrame(st.glideRaf);
+    st.autoRaf = 0;
+    st.glideRaf = 0;
     st.active = true;
     st.src = src;
     st.startX = e.clientX;
@@ -145,34 +160,93 @@ export function ReelMarquee({ images }: { images?: string[] }) {
     st.src = "none";
     // Convert ruler velocity → carousel velocity so momentum feels right
     if (wasRuler) st.vel = st.vel / st.rulerRatio;
-    st.glideRaf = requestAnimationFrame(glide);
-  }, [glide]);
+    if (st.reducedMotion || !st.inView || document.hidden) {
+      startAuto();
+    } else {
+      st.glideRaf = requestAnimationFrame(glide);
+    }
+  }, [glide, startAuto]);
 
-  // ── Mount: measure + derive ratio + start auto-scroll ─────────
+  // ── Measure responsively and only animate while visible ───────
   useEffect(() => {
     const el = trackRef.current;
-    if (!el) return;
+    const frame = frameRef.current;
+    if (!el || !frame) return;
+    const state = s.current;
 
-    const hw = el.scrollWidth / 2; // one full loop
-    const pi = hw / activeShots.length; // px per image slot
-    s.current.halfWidth = hw;
-    // 1 image = R_LABEL ribs on wheel → ratio = (R_LABEL * WHEEL_TICK) / perImage
-    s.current.rulerRatio = (R_LABEL * WHEEL_TICK) / pi;
+    const measure = () => {
+      const firstCopy = el.children.item(0);
+      const secondCopy = el.children.item(activeShots.length);
+      if (!(firstCopy instanceof HTMLElement) || !(secondCopy instanceof HTMLElement)) return;
 
-    s.current.autoRaf = requestAnimationFrame(auto);
+      const width = secondCopy.getBoundingClientRect().left - firstCopy.getBoundingClientRect().left;
+      if (width <= 0) return;
+      state.halfWidth = width;
+      state.offset = ((state.offset % width) + width) % width;
+      const perImage = width / activeShots.length;
+      state.rulerRatio = (R_LABEL * WHEEL_TICK) / perImage;
+      draw();
+    };
+
+    measure();
+    const resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(el);
+
+    const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    state.reducedMotion = motionPreference.matches;
+    const updateMotionPreference = () => {
+      state.reducedMotion = motionPreference.matches;
+      if (motionPreference.matches) {
+        cancelAnimationFrame(state.autoRaf);
+        cancelAnimationFrame(state.glideRaf);
+        state.autoRaf = 0;
+        state.glideRaf = 0;
+      } else {
+        startAuto();
+      }
+    };
+    const updateVisibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(state.autoRaf);
+        cancelAnimationFrame(state.glideRaf);
+        state.autoRaf = 0;
+        state.glideRaf = 0;
+      } else {
+        startAuto();
+      }
+    };
+    const intersectionObserver = new IntersectionObserver(([entry]) => {
+      state.inView = entry.isIntersecting;
+      if (entry.isIntersecting) {
+        startAuto();
+      } else {
+        cancelAnimationFrame(state.autoRaf);
+        cancelAnimationFrame(state.glideRaf);
+        state.autoRaf = 0;
+        state.glideRaf = 0;
+      }
+    });
+
+    intersectionObserver.observe(frame);
+    motionPreference.addEventListener("change", updateMotionPreference);
+    document.addEventListener("visibilitychange", updateVisibility);
 
     return () => {
-      cancelAnimationFrame(s.current.autoRaf);
-      cancelAnimationFrame(s.current.glideRaf);
+      resizeObserver.disconnect();
+      intersectionObserver.disconnect();
+      motionPreference.removeEventListener("change", updateMotionPreference);
+      document.removeEventListener("visibilitychange", updateVisibility);
+      cancelAnimationFrame(state.autoRaf);
+      cancelAnimationFrame(state.glideRaf);
     };
-  }, [auto, activeShots.length]);
+  }, [activeShots.length, draw, startAuto]);
 
   // ─────────────────────────────────────────────────────────────
   return (
-    <div className="relative w-full select-none hero-marquee-frame">
+    <div ref={frameRef} className="relative w-full select-none hero-marquee-frame">
       <div
         className="relative w-full overflow-hidden py-1 hero-marquee-inner"
-        style={{ cursor: "grab" }}
+        style={{ cursor: "grab", touchAction: "pan-y" }}
         onPointerDown={(e) => onDown(e, "img")}
         onPointerMove={onMove}
         onPointerUp={onUp}
@@ -191,18 +265,11 @@ export function ReelMarquee({ images }: { images?: string[] }) {
                 height={1000}
                 loading="lazy"
                 draggable={false}
-                className="w-full h-full object-cover grayscale-[30%] hover:grayscale-0 transition-all duration-700 pointer-events-none"
+                onError={(event) => {
+                  event.currentTarget.src = DEFAULT_REEL_IMAGES[i % DEFAULT_REEL_IMAGES.length];
+                }}
+                className="w-full h-full object-cover pointer-events-none"
               />
-              <div className="filmstrip-scratch" />
-              {i % 5 === 0 && (
-                <div
-                  className="absolute inset-0 mix-blend-multiply pointer-events-none"
-                  style={{
-                    background: "linear-gradient(135deg, var(--brand-red) 0%, transparent 70%)",
-                    opacity: 0.4,
-                  }}
-                />
-              )}
             </div>
           ))}
         </div>
