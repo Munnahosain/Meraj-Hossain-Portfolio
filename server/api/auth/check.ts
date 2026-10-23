@@ -1,5 +1,5 @@
 import { connectDB } from "~/server/utils/db";
-import { requireAdminEmail } from "~/server/utils/auth";
+import { getAllowedAdminEmails, requireAdminEmail } from "~/server/utils/auth";
 import { User } from "~/server/models/User";
 
 export default defineEventHandler(async (event) => {

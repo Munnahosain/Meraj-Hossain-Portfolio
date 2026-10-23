@@ -12,10 +12,10 @@ export default defineEventHandler(async (event) => {
       settings = await WebsiteSettings.create({
         branding: {
           websiteName: "Creative Canvas Hub",
-          websiteLogo: "",
+          websiteLogo: "/MCU-LOGO-0.2V-1.png",
           darkLogo: "",
           lightLogo: "",
-          footerLogo: "",
+          footerLogo: "/MCU-LOGO-0.2V-1.png",
           favicon: "",
           browserTitle: "Creative Canvas Hub",
         },
@@ -48,6 +48,7 @@ export default defineEventHandler(async (event) => {
           description: "Graphics designer, video editor and motion graphics artist",
           backgroundImage: "",
           profileImage: "",
+          reelImages: [],
           resumePdf: "",
           resumeButtonText: "Download Resume",
           hireMeButtonText: "Hire Me",

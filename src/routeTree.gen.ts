@@ -24,11 +24,17 @@ import { Route as ApiMediaRouteImport } from './routes/api/media'
 import { Route as ApiExperienceRouteImport } from './routes/api/experience'
 import { Route as ApiEducationRouteImport } from './routes/api/education'
 import { Route as ApiContactRouteImport } from './routes/api/contact'
+import { Route as ApiCategoriesRouteImport } from './routes/api/categories'
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AdminGoogleCallbackRouteImport } from './routes/admin/google-callback'
 import { Route as AdminLayoutRouteImport } from './routes/admin/_layout'
 import { Route as AdminLayoutIndexRouteImport } from './routes/admin/_layout/index'
+import { Route as ApiUploadsFilenameRouteImport } from './routes/api/uploads/$filename'
+import { Route as ApiSkillsChar91idChar93RouteImport } from './routes/api/skills/[id]'
+import { Route as ApiSkillsIdRouteImport } from './routes/api/skills/$id'
 import { Route as ApiProjectsIdRouteImport } from './routes/api/projects/$id'
+import { Route as ApiCategoriesIdRouteImport } from './routes/api/categories/$id'
+import { Route as ApiAuthSignupRouteImport } from './routes/api/auth/signup'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthCheckRouteImport } from './routes/api/auth/check'
 import { Route as AdminLayoutTestimonialsRouteImport } from './routes/admin/_layout/testimonials'
@@ -121,6 +127,11 @@ const ApiContactRoute = ApiContactRouteImport.update({
   path: '/api/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCategoriesRoute = ApiCategoriesRouteImport.update({
+  id: '/api/categories',
+  path: '/api/categories',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
@@ -141,10 +152,35 @@ const AdminLayoutIndexRoute = AdminLayoutIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminLayoutRoute,
 } as any)
+const ApiUploadsFilenameRoute = ApiUploadsFilenameRouteImport.update({
+  id: '/api/uploads/$filename',
+  path: '/api/uploads/$filename',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSkillsChar91idChar93Route = ApiSkillsChar91idChar93RouteImport.update({
+  id: '/id',
+  path: '/id',
+  getParentRoute: () => ApiSkillsRoute,
+} as any)
+const ApiSkillsIdRoute = ApiSkillsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiSkillsRoute,
+} as any)
 const ApiProjectsIdRoute = ApiProjectsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => ApiProjectsRoute,
+} as any)
+const ApiCategoriesIdRoute = ApiCategoriesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiCategoriesRoute,
+} as any)
+const ApiAuthSignupRoute = ApiAuthSignupRouteImport.update({
+  id: '/api/auth/signup',
+  path: '/api/auth/signup',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
   id: '/api/auth/login',
@@ -237,6 +273,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminLayoutRouteWithChildren
   '/admin/google-callback': typeof AdminGoogleCallbackRoute
   '/admin/login': typeof AdminLoginRoute
+  '/api/categories': typeof ApiCategoriesRouteWithChildren
   '/api/contact': typeof ApiContactRoute
   '/api/education': typeof ApiEducationRoute
   '/api/experience': typeof ApiExperienceRoute
@@ -245,7 +282,7 @@ export interface FileRoutesByFullPath {
   '/api/projects': typeof ApiProjectsRouteWithChildren
   '/api/services': typeof ApiServicesRoute
   '/api/settings': typeof ApiSettingsRoute
-  '/api/skills': typeof ApiSkillsRoute
+  '/api/skills': typeof ApiSkillsRouteWithChildren
   '/admin/analytics': typeof AdminLayoutAnalyticsRoute
   '/admin/backup': typeof AdminLayoutBackupRoute
   '/admin/categories': typeof AdminLayoutCategoriesRoute
@@ -262,7 +299,12 @@ export interface FileRoutesByFullPath {
   '/admin/testimonials': typeof AdminLayoutTestimonialsRoute
   '/api/auth/check': typeof ApiAuthCheckRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/categories/$id': typeof ApiCategoriesIdRoute
   '/api/projects/$id': typeof ApiProjectsIdRoute
+  '/api/skills/$id': typeof ApiSkillsIdRoute
+  '/api/skills/id': typeof ApiSkillsChar91idChar93Route
+  '/api/uploads/$filename': typeof ApiUploadsFilenameRoute
   '/admin/': typeof AdminLayoutIndexRoute
 }
 export interface FileRoutesByTo {
@@ -274,6 +316,7 @@ export interface FileRoutesByTo {
   '/services': typeof ServicesRoute
   '/admin/google-callback': typeof AdminGoogleCallbackRoute
   '/admin/login': typeof AdminLoginRoute
+  '/api/categories': typeof ApiCategoriesRouteWithChildren
   '/api/contact': typeof ApiContactRoute
   '/api/education': typeof ApiEducationRoute
   '/api/experience': typeof ApiExperienceRoute
@@ -282,7 +325,7 @@ export interface FileRoutesByTo {
   '/api/projects': typeof ApiProjectsRouteWithChildren
   '/api/services': typeof ApiServicesRoute
   '/api/settings': typeof ApiSettingsRoute
-  '/api/skills': typeof ApiSkillsRoute
+  '/api/skills': typeof ApiSkillsRouteWithChildren
   '/admin/analytics': typeof AdminLayoutAnalyticsRoute
   '/admin/backup': typeof AdminLayoutBackupRoute
   '/admin/categories': typeof AdminLayoutCategoriesRoute
@@ -299,7 +342,12 @@ export interface FileRoutesByTo {
   '/admin/testimonials': typeof AdminLayoutTestimonialsRoute
   '/api/auth/check': typeof ApiAuthCheckRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/categories/$id': typeof ApiCategoriesIdRoute
   '/api/projects/$id': typeof ApiProjectsIdRoute
+  '/api/skills/$id': typeof ApiSkillsIdRoute
+  '/api/skills/id': typeof ApiSkillsChar91idChar93Route
+  '/api/uploads/$filename': typeof ApiUploadsFilenameRoute
   '/admin': typeof AdminLayoutIndexRoute
 }
 export interface FileRoutesById {
@@ -313,6 +361,7 @@ export interface FileRoutesById {
   '/admin/_layout': typeof AdminLayoutRouteWithChildren
   '/admin/google-callback': typeof AdminGoogleCallbackRoute
   '/admin/login': typeof AdminLoginRoute
+  '/api/categories': typeof ApiCategoriesRouteWithChildren
   '/api/contact': typeof ApiContactRoute
   '/api/education': typeof ApiEducationRoute
   '/api/experience': typeof ApiExperienceRoute
@@ -321,7 +370,7 @@ export interface FileRoutesById {
   '/api/projects': typeof ApiProjectsRouteWithChildren
   '/api/services': typeof ApiServicesRoute
   '/api/settings': typeof ApiSettingsRoute
-  '/api/skills': typeof ApiSkillsRoute
+  '/api/skills': typeof ApiSkillsRouteWithChildren
   '/admin/_layout/analytics': typeof AdminLayoutAnalyticsRoute
   '/admin/_layout/backup': typeof AdminLayoutBackupRoute
   '/admin/_layout/categories': typeof AdminLayoutCategoriesRoute
@@ -338,7 +387,12 @@ export interface FileRoutesById {
   '/admin/_layout/testimonials': typeof AdminLayoutTestimonialsRoute
   '/api/auth/check': typeof ApiAuthCheckRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/categories/$id': typeof ApiCategoriesIdRoute
   '/api/projects/$id': typeof ApiProjectsIdRoute
+  '/api/skills/$id': typeof ApiSkillsIdRoute
+  '/api/skills/id': typeof ApiSkillsChar91idChar93Route
+  '/api/uploads/$filename': typeof ApiUploadsFilenameRoute
   '/admin/_layout/': typeof AdminLayoutIndexRoute
 }
 export interface FileRouteTypes {
@@ -353,6 +407,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin/google-callback'
     | '/admin/login'
+    | '/api/categories'
     | '/api/contact'
     | '/api/education'
     | '/api/experience'
@@ -378,7 +433,12 @@ export interface FileRouteTypes {
     | '/admin/testimonials'
     | '/api/auth/check'
     | '/api/auth/login'
+    | '/api/auth/signup'
+    | '/api/categories/$id'
     | '/api/projects/$id'
+    | '/api/skills/$id'
+    | '/api/skills/id'
+    | '/api/uploads/$filename'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -390,6 +450,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/admin/google-callback'
     | '/admin/login'
+    | '/api/categories'
     | '/api/contact'
     | '/api/education'
     | '/api/experience'
@@ -415,7 +476,12 @@ export interface FileRouteTypes {
     | '/admin/testimonials'
     | '/api/auth/check'
     | '/api/auth/login'
+    | '/api/auth/signup'
+    | '/api/categories/$id'
     | '/api/projects/$id'
+    | '/api/skills/$id'
+    | '/api/skills/id'
+    | '/api/uploads/$filename'
     | '/admin'
   id:
     | '__root__'
@@ -428,6 +494,7 @@ export interface FileRouteTypes {
     | '/admin/_layout'
     | '/admin/google-callback'
     | '/admin/login'
+    | '/api/categories'
     | '/api/contact'
     | '/api/education'
     | '/api/experience'
@@ -453,7 +520,12 @@ export interface FileRouteTypes {
     | '/admin/_layout/testimonials'
     | '/api/auth/check'
     | '/api/auth/login'
+    | '/api/auth/signup'
+    | '/api/categories/$id'
     | '/api/projects/$id'
+    | '/api/skills/$id'
+    | '/api/skills/id'
+    | '/api/uploads/$filename'
     | '/admin/_layout/'
   fileRoutesById: FileRoutesById
 }
@@ -467,6 +539,7 @@ export interface RootRouteChildren {
   AdminLayoutRoute: typeof AdminLayoutRouteWithChildren
   AdminGoogleCallbackRoute: typeof AdminGoogleCallbackRoute
   AdminLoginRoute: typeof AdminLoginRoute
+  ApiCategoriesRoute: typeof ApiCategoriesRouteWithChildren
   ApiContactRoute: typeof ApiContactRoute
   ApiEducationRoute: typeof ApiEducationRoute
   ApiExperienceRoute: typeof ApiExperienceRoute
@@ -475,9 +548,11 @@ export interface RootRouteChildren {
   ApiProjectsRoute: typeof ApiProjectsRouteWithChildren
   ApiServicesRoute: typeof ApiServicesRoute
   ApiSettingsRoute: typeof ApiSettingsRoute
-  ApiSkillsRoute: typeof ApiSkillsRoute
+  ApiSkillsRoute: typeof ApiSkillsRouteWithChildren
   ApiAuthCheckRoute: typeof ApiAuthCheckRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
+  ApiAuthSignupRoute: typeof ApiAuthSignupRoute
+  ApiUploadsFilenameRoute: typeof ApiUploadsFilenameRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -587,6 +662,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiContactRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/categories': {
+      id: '/api/categories'
+      path: '/api/categories'
+      fullPath: '/api/categories'
+      preLoaderRoute: typeof ApiCategoriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/login': {
       id: '/admin/login'
       path: '/admin/login'
@@ -615,12 +697,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLayoutIndexRouteImport
       parentRoute: typeof AdminLayoutRoute
     }
+    '/api/uploads/$filename': {
+      id: '/api/uploads/$filename'
+      path: '/api/uploads/$filename'
+      fullPath: '/api/uploads/$filename'
+      preLoaderRoute: typeof ApiUploadsFilenameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/skills/id': {
+      id: '/api/skills/id'
+      path: '/id'
+      fullPath: '/api/skills/id'
+      preLoaderRoute: typeof ApiSkillsChar91idChar93RouteImport
+      parentRoute: typeof ApiSkillsRoute
+    }
+    '/api/skills/$id': {
+      id: '/api/skills/$id'
+      path: '/$id'
+      fullPath: '/api/skills/$id'
+      preLoaderRoute: typeof ApiSkillsIdRouteImport
+      parentRoute: typeof ApiSkillsRoute
+    }
     '/api/projects/$id': {
       id: '/api/projects/$id'
       path: '/$id'
       fullPath: '/api/projects/$id'
       preLoaderRoute: typeof ApiProjectsIdRouteImport
       parentRoute: typeof ApiProjectsRoute
+    }
+    '/api/categories/$id': {
+      id: '/api/categories/$id'
+      path: '/$id'
+      fullPath: '/api/categories/$id'
+      preLoaderRoute: typeof ApiCategoriesIdRouteImport
+      parentRoute: typeof ApiCategoriesRoute
+    }
+    '/api/auth/signup': {
+      id: '/api/auth/signup'
+      path: '/api/auth/signup'
+      fullPath: '/api/auth/signup'
+      preLoaderRoute: typeof ApiAuthSignupRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/auth/login': {
       id: '/api/auth/login'
@@ -777,6 +894,18 @@ const AdminLayoutRouteWithChildren = AdminLayoutRoute._addFileChildren(
   AdminLayoutRouteChildren,
 )
 
+interface ApiCategoriesRouteChildren {
+  ApiCategoriesIdRoute: typeof ApiCategoriesIdRoute
+}
+
+const ApiCategoriesRouteChildren: ApiCategoriesRouteChildren = {
+  ApiCategoriesIdRoute: ApiCategoriesIdRoute,
+}
+
+const ApiCategoriesRouteWithChildren = ApiCategoriesRoute._addFileChildren(
+  ApiCategoriesRouteChildren,
+)
+
 interface ApiProjectsRouteChildren {
   ApiProjectsIdRoute: typeof ApiProjectsIdRoute
 }
@@ -789,6 +918,20 @@ const ApiProjectsRouteWithChildren = ApiProjectsRoute._addFileChildren(
   ApiProjectsRouteChildren,
 )
 
+interface ApiSkillsRouteChildren {
+  ApiSkillsIdRoute: typeof ApiSkillsIdRoute
+  ApiSkillsChar91idChar93Route: typeof ApiSkillsChar91idChar93Route
+}
+
+const ApiSkillsRouteChildren: ApiSkillsRouteChildren = {
+  ApiSkillsIdRoute: ApiSkillsIdRoute,
+  ApiSkillsChar91idChar93Route: ApiSkillsChar91idChar93Route,
+}
+
+const ApiSkillsRouteWithChildren = ApiSkillsRoute._addFileChildren(
+  ApiSkillsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
@@ -799,6 +942,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminLayoutRoute: AdminLayoutRouteWithChildren,
   AdminGoogleCallbackRoute: AdminGoogleCallbackRoute,
   AdminLoginRoute: AdminLoginRoute,
+  ApiCategoriesRoute: ApiCategoriesRouteWithChildren,
   ApiContactRoute: ApiContactRoute,
   ApiEducationRoute: ApiEducationRoute,
   ApiExperienceRoute: ApiExperienceRoute,
@@ -807,9 +951,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiProjectsRoute: ApiProjectsRouteWithChildren,
   ApiServicesRoute: ApiServicesRoute,
   ApiSettingsRoute: ApiSettingsRoute,
-  ApiSkillsRoute: ApiSkillsRoute,
+  ApiSkillsRoute: ApiSkillsRouteWithChildren,
   ApiAuthCheckRoute: ApiAuthCheckRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
+  ApiAuthSignupRoute: ApiAuthSignupRoute,
+  ApiUploadsFilenameRoute: ApiUploadsFilenameRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

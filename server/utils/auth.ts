@@ -36,6 +36,10 @@ export function getAllowedAdminEmails() {
     .map((email) => String(email).trim().toLowerCase());
 }
 
+export function isAuthorizedAdminEmail(email: string) {
+  return getAllowedAdminEmails().includes(email.trim().toLowerCase());
+}
+
 export async function requireAdminEmail(event: H3Event) {
   const user = await requireAuth(event);
   const allowedEmails = getAllowedAdminEmails();

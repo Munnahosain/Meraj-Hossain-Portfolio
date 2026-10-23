@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { fetchWithAuth } from "@/lib/admin-api";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 
 export const Route = createFileRoute("/admin/_layout")({

@@ -134,11 +134,14 @@ function AdminDashboard() {
             { label: "Edit Settings", href: "/admin/settings" },
             { label: "Add Project", href: "/admin/portfolio" },
             { label: "Manage Skills", href: "/admin/skills" },
+            { label: "Open Website", href: "/", external: true },
             { label: "View Messages", href: "/admin/messages" },
           ].map((action) => (
             <Link
               key={action.href}
               to={action.href}
+              target={action.external ? "_blank" : undefined}
+              rel={action.external ? "noreferrer" : undefined}
               className="bg-gray-800 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-lg text-center transition-colors"
             >
               {action.label}
