@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { Plus, Trash2, Search, Link as LinkIcon, Eye, Copy, Check } from "lucide-react";
+import { fetchWithAuth } from "@/lib/admin-api";
 
 export const Route = createFileRoute("/admin/_layout/media")({
   component: AdminMedia,
@@ -22,11 +23,8 @@ export function AdminMedia() {
 
   const fetchMedia = async () => {
     try {
-      const res = await fetch("/api/media", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json();
-      if (json.success) setMediaList(json.data || []);
+      const result = await fetchWithAuth<{ data: any[] }>(token, "/api/media");
+      if (result && (result as any).data) setMediaList((result as any).data || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -43,17 +41,8 @@ export function AdminMedia() {
     if (!form.url) return;
 
     try {
-      const res = await fetch("/api/media", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(form),
-      });
-
-      const json = await res.json();
-      if (json.success) {
+      const result = await fetchWithAuth<{ success: boolean }>(token, "/api/media", { method: "POST", body: JSON.stringify(form) });
+      if (result && (result as any).success) {
         setForm({ url: "", title: "", alt: "" });
         fetchMedia();
       }
@@ -65,12 +54,8 @@ export function AdminMedia() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this media item?")) return;
     try {
-      const res = await fetch(`/api/media?id=${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json();
-      if (json.success) fetchMedia();
+      const result = await fetchWithAuth<{ success: boolean }>(token, `/api/media?id=${id}`, { method: "DELETE" });
+      if (result && (result as any).success) fetchMedia();
     } catch (e) {
       console.error(e);
     }
@@ -149,7 +134,7 @@ export function AdminMedia() {
 
           <button
             type="submit"
-            className="w-full bg-[var(--brand-red)] text-white font-semibold py-2 rounded hover:brightness-110 transition-all flex items-center justify-center gap-2 text-sm"
+            className="w-full btn-primary text-white font-semibold py-2 rounded transition-all flex items-center justify-center gap-2 text-sm"
           >
             <Plus size={16} />
             Add to Library
@@ -182,7 +167,7 @@ export function AdminMedia() {
               {filteredMedia.map((m) => (
                 <div
                   key={m._id}
-                  className="bg-black border border-gray-800 rounded-lg overflow-hidden flex flex-col justify-between group"
+                  className="card overflow-hidden flex flex-col justify-between group"
                 >
                   <div className="aspect-video bg-neutral-900 border-b border-gray-800 flex items-center justify-center relative overflow-hidden">
                     {m.fileType === "youtube" ? (
@@ -231,3 +216,4 @@ export function AdminMedia() {
     </div>
   );
 }
+

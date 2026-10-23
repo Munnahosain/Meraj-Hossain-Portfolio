@@ -157,15 +157,10 @@ export function ReelMarquee() {
 
   // ─────────────────────────────────────────────────────────────
   return (
-    <div className="relative w-full select-none">
-      {/* ── Image strip ─────────────────────────────────────── */}
+    <div className="relative w-full select-none hero-marquee-frame">
       <div
-        className="relative w-full overflow-hidden py-1"
-        style={{
-          maskImage:
-            "linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%)",
-          cursor: "grab",
-        }}
+        className="relative w-full overflow-hidden py-1 hero-marquee-inner"
+        style={{ cursor: "grab" }}
         onPointerDown={(e) => onDown(e, "img")}
         onPointerMove={onMove}
         onPointerUp={onUp}
@@ -175,7 +170,7 @@ export function ReelMarquee() {
           {DOUBLED.map((src, i) => (
             <div
               key={i}
-              className="relative w-[220px] md:w-[280px] aspect-[4/5] shrink-0 overflow-hidden bg-neutral-900 rounded-sm"
+              className="relative w-[220px] md:w-[280px] aspect-[4/5] shrink-0 overflow-hidden bg-neutral-900 filmstrip-cell"
             >
               <img
                 src={src}
@@ -186,6 +181,7 @@ export function ReelMarquee() {
                 draggable={false}
                 className="w-full h-full object-cover grayscale-[30%] hover:grayscale-0 transition-all duration-700 pointer-events-none"
               />
+              <div className="filmstrip-scratch" />
               {i % 5 === 0 && (
                 <div
                   className="absolute inset-0 mix-blend-multiply pointer-events-none"
@@ -199,7 +195,6 @@ export function ReelMarquee() {
           ))}
         </div>
       </div>
-
     </div>
   );
 }

@@ -22,18 +22,8 @@ function AdminLayout() {
       }
 
       try {
-        const response = await fetch("/api/auth/check", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          setIsAuthenticated(true);
-        } else {
-          setToken("");
-          navigate({ to: "/admin/login", replace: true });
-        }
+        await fetchWithAuth(token, "/api/auth/check");
+        setIsAuthenticated(true);
       } catch (error) {
         console.error("Auth check failed:", error);
         setToken("");
@@ -72,3 +62,4 @@ function AdminLayout() {
     </div>
   );
 }
+

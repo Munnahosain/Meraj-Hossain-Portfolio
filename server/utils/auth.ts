@@ -25,11 +25,22 @@ export async function requireAuth(event: H3Event) {
   return payload;
 }
 
+export function getAllowedAdminEmails() {
+  return [
+    process.env.ADMIN_EMAIL?.trim().toLowerCase(),
+    process.env.VITE_ADMIN_EMAIL?.trim().toLowerCase(),
+    process.env.DEV_ADMIN_EMAIL?.trim().toLowerCase(),
+    process.env.VITE_DEV_ADMIN_EMAIL?.trim().toLowerCase(),
+  ]
+    .filter(Boolean)
+    .map((email) => String(email).trim().toLowerCase());
+}
+
 export async function requireAdminEmail(event: H3Event) {
   const user = await requireAuth(event);
-  const allowedEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const allowedEmails = getAllowedAdminEmails();
 
-  if (!allowedEmail || user.email?.trim().toLowerCase() !== allowedEmail) {
+  if (!allowedEmails.length || !allowedEmails.includes(user.email?.trim().toLowerCase())) {
     throw createError({
       statusCode: 403,
       statusMessage: "Access Denied - Admin email not authorized",

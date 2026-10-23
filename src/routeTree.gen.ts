@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ServicesRouteImport } from './routes/services'
 import { Route as ProjectsRouteImport } from './routes/projects'
+import { Route as ProjectRouteImport } from './routes/project'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
@@ -53,6 +54,11 @@ const ServicesRoute = ServicesRouteImport.update({
 const ProjectsRoute = ProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectRoute = ProjectRouteImport.update({
+  id: '/project',
+  path: '/project',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -225,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
+  '/project': typeof ProjectRoute
   '/projects': typeof ProjectsRoute
   '/services': typeof ServicesRoute
   '/admin': typeof AdminLayoutRouteWithChildren
@@ -262,6 +269,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
+  '/project': typeof ProjectRoute
   '/projects': typeof ProjectsRoute
   '/services': typeof ServicesRoute
   '/admin/google-callback': typeof AdminGoogleCallbackRoute
@@ -299,6 +307,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
+  '/project': typeof ProjectRoute
   '/projects': typeof ProjectsRoute
   '/services': typeof ServicesRoute
   '/admin/_layout': typeof AdminLayoutRouteWithChildren
@@ -338,6 +347,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/contact'
+    | '/project'
     | '/projects'
     | '/services'
     | '/admin'
@@ -375,6 +385,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/contact'
+    | '/project'
     | '/projects'
     | '/services'
     | '/admin/google-callback'
@@ -411,6 +422,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/contact'
+    | '/project'
     | '/projects'
     | '/services'
     | '/admin/_layout'
@@ -449,6 +461,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   ContactRoute: typeof ContactRoute
+  ProjectRoute: typeof ProjectRoute
   ProjectsRoute: typeof ProjectsRoute
   ServicesRoute: typeof ServicesRoute
   AdminLayoutRoute: typeof AdminLayoutRouteWithChildren
@@ -481,6 +494,13 @@ declare module '@tanstack/react-router' {
       path: '/projects'
       fullPath: '/projects'
       preLoaderRoute: typeof ProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/project': {
+      id: '/project'
+      path: '/project'
+      fullPath: '/project'
+      preLoaderRoute: typeof ProjectRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -773,6 +793,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   ContactRoute: ContactRoute,
+  ProjectRoute: ProjectRoute,
   ProjectsRoute: ProjectsRoute,
   ServicesRoute: ServicesRoute,
   AdminLayoutRoute: AdminLayoutRouteWithChildren,

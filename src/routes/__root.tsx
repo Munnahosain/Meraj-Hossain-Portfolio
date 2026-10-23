@@ -78,14 +78,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Meraj Hossain â€” Graphics & Motion Designer" },
+      { title: "Meraj Hossain — Graphics & Motion Designer" },
       {
         name: "description",
         content:
-          "Portfolio of Meraj Hossain â€” graphics designer, video editor and motion graphics artist based in Dhaka, Bangladesh.",
+          "Portfolio of Meraj Hossain — graphics designer, video editor and motion graphics artist based in Dhaka, Bangladesh.",
       },
       { name: "author", content: "Meraj Hossain" },
-      { property: "og:title", content: "Meraj Hossain â€” Graphics & Motion Designer" },
+      { property: "og:title", content: "Meraj Hossain — Graphics & Motion Designer" },
       { property: "og:description", content: "Branding, motion graphics and video editing." },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "Meraj Hossain" },
@@ -127,7 +127,7 @@ function RootComponent() {
   const location = useLocation();
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Check if we're on an admin route â€” skip preloader & smooth scroll there
+  // Check if we're on an admin route — skip preloader & smooth scroll there
   const isAdminRoute = location.pathname.startsWith("/admin");
 
   useEffect(() => {
@@ -173,7 +173,7 @@ function RootComponent() {
       <div className="grain-overlay" aria-hidden="true" />
 
       {!isAdminRoute && !isLoaded && <Preloader onComplete={() => setIsLoaded(true)} />}
-      <div className="page-fade"><Outlet /></div>
+      <div key={location.pathname} className="page-fade"><Outlet /></div>
     </QueryClientProvider>
   );
 }

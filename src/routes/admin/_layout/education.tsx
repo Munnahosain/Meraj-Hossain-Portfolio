@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { Plus, Trash2, Edit2 } from "lucide-react";
+import { fetchWithAuth } from "@/lib/admin-api";
 
 export const Route = createFileRoute("/admin/_layout/education")({
   component: AdminEducation,
@@ -46,29 +47,19 @@ export function AdminEducation() {
       const method = editingId ? "PUT" : "POST";
       const body = editingId ? { _id: editingId, ...form } : form;
 
-      const res = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
+      await fetchWithAuth(token, url, { method, body: JSON.stringify(body) });
+      // reset form and refresh
+      setForm({
+        degree: "",
+        institution: "",
+        fieldOfStudy: "",
+        startDate: "",
+        endDate: "",
+        description: "",
+        displayOrder: items.length + 1,
       });
-
-      const json = await res.json();
-      if (json.success) {
-        setForm({
-          degree: "",
-          institution: "",
-          fieldOfStudy: "",
-          startDate: "",
-          endDate: "",
-          description: "",
-          displayOrder: items.length + 1,
-        });
-        setEditingId(null);
-        fetchItems();
-      }
+      setEditingId(null);
+      fetchItems();
     } catch (e) {
       console.error(e);
     }
@@ -77,12 +68,8 @@ export function AdminEducation() {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this education entry?")) return;
     try {
-      const res = await fetch(`/api/education?id=${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json();
-      if (json.success) fetchItems();
+      await fetchWithAuth(token, `/api/education?id=${id}`, { method: "DELETE" });
+      fetchItems();
     } catch (e) {
       console.error(e);
     }
@@ -190,7 +177,7 @@ export function AdminEducation() {
           <div className="flex gap-2 pt-2">
             <button
               type="submit"
-              className="flex-1 bg-[var(--brand-red)] text-white font-semibold py-2 rounded hover:brightness-110 transition-all flex items-center justify-center gap-2"
+              className="flex-1 btn-primary text-white font-semibold py-2 rounded transition-all flex items-center justify-center gap-2"
             >
               <Plus size={16} />
               {editingId ? "Update Entry" : "Add Entry"}
@@ -212,7 +199,7 @@ export function AdminEducation() {
                   className="p-4 bg-black border border-gray-800 rounded-lg flex justify-between items-start"
                 >
                   <div>
-                    <span className="font-mono text-xs text-[var(--brand-red)]">
+                    <span className="font-mono text-xs text-[var(--primary)]">
                       {x.startDate} — {x.endDate}
                     </span>
                     <h3 className="font-bold text-white text-lg mt-1">{x.degree}</h3>
@@ -253,3 +240,7 @@ export function AdminEducation() {
     </div>
   );
 }
+
+
+
+

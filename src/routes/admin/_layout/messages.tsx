@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { Mail, Trash2, Calendar, User, MessageSquare } from "lucide-react";
+import { fetchWithAuth } from "@/lib/admin-api";
 
 export const Route = createFileRoute("/admin/_layout/messages")({
   component: AdminMessages,
@@ -14,10 +15,7 @@ export function AdminMessages() {
 
   const fetchMessages = async () => {
     try {
-      const res = await fetch("/api/messages", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json();
+      const json = await fetchWithAuth(token, "/api/messages");
       if (json.success) setMessages(json.data || []);
     } catch (e) {
       console.error(e);
@@ -33,12 +31,8 @@ export function AdminMessages() {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this message inquiry?")) return;
     try {
-      const res = await fetch(`/api/messages?id=${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json();
-      if (json.success) fetchMessages();
+      await fetchWithAuth(token, `/api/messages?id=${id}`, { method: "DELETE" });
+      fetchMessages();
     } catch (e) {
       console.error(e);
     }
@@ -65,7 +59,7 @@ export function AdminMessages() {
               <div key={m._id} className="p-5 bg-black border border-gray-800 rounded-lg space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-800/80 pb-3">
                   <div className="flex items-center gap-3">
-                    <User className="h-5 w-5 text-[var(--brand-red)]" />
+                    <User className="h-5 w-5 text-[var(--primary)]" />
                     <div>
                       <h3 className="font-bold text-white text-base">{m.name}</h3>
                       <a
@@ -110,3 +104,6 @@ export function AdminMessages() {
     </div>
   );
 }
+
+
+

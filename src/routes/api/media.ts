@@ -3,6 +3,7 @@ import { connectDB } from "../../../server/utils/db";
 import { Media } from "../../../server/models/Media";
 import { extractTokenFromHeader, verifyToken } from "../../../server/utils/jwt";
 import { parseMediaUrl } from "../../../server/utils/media-helper";
+import { uploadToCloudinary } from "../../../server/utils/cloudinary";
 
 export const Route = createFileRoute("/api/media")({
   server: {
@@ -34,7 +35,34 @@ export const Route = createFileRoute("/api/media")({
 
           await connectDB();
           const body = await request.json().catch(() => ({}));
-          const { url, title, alt } = body;
+          const { url, title, alt, data, filename } = body as any;
+
+          // If client sent base64 data (data URL), upload to Cloudinary
+          if (data) {
+            const match = String(data).match(/^data:(.+);base64,(.+)$/);
+            if (!match) {
+              return Response.json({ success: false, message: "Invalid data format" }, { status: 400 });
+            }
+
+            const mime = match[1];
+            const b64 = match[2];
+            const buffer = Buffer.from(b64, "base64");
+
+            const result: any = await uploadToCloudinary(buffer, filename || title || `upload-${Date.now()}`);
+
+            const newMedia = await Media.create({
+              fileName: result.public_id || title || filename || "upload",
+              originalName: title || filename || "upload",
+              url: result.secure_url,
+              mimeType: mime,
+              fileType: mime.startsWith("video/") ? "video" : "image",
+              size: result.bytes || buffer.length,
+              altText: alt || title || "",
+              tags: [mime.startsWith("video/") ? "video" : "image"],
+            });
+
+            return Response.json({ success: true, data: newMedia, message: "Upload successful" });
+          }
 
           if (!url) {
             return Response.json(
@@ -66,6 +94,7 @@ export const Route = createFileRoute("/api/media")({
           return Response.json({ success: false, message: "Failed to add media" }, { status: 500 });
         }
       },
+
       DELETE: async ({ request }) => {
         try {
           const token = extractTokenFromHeader(request.headers.get("authorization") || undefined);

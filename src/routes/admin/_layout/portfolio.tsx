@@ -61,6 +61,28 @@ const emptyProject = (): Omit<Project, "_id"> => ({
   displayOrder: 0,
 });
 
+// Helpers to generate preview thumbnails for common link types
+function extractYouTubeId(url: string): string | null {
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+  return match ? match[1] : null;
+}
+
+function getYouTubeThumb(url: string) {
+  const id = extractYouTubeId(url);
+  return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : url;
+}
+
+function extractGoogleDriveId(url: string): string | null {
+  if (!url) return null;
+  const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : null;
+}
+
+function getDriveThumb(url: string) {
+  const id = extractGoogleDriveId(url);
+  return id ? `https://drive.google.com/uc?id=${id}&export=view` : url;
+}
+
 function AdminPortfolio() {
   const [token] = useLocalStorage("admin_token", "");
   const [projects, setProjects] = useState<Project[]>([]);
@@ -157,7 +179,7 @@ function AdminPortfolio() {
           <h1 className="text-3xl font-bold text-white">Portfolio</h1>
           <p className="text-gray-500">Manage your projects</p>
         </div>
-        <Button onClick={openCreate} className="bg-[var(--brand-red)] hover:brightness-110">
+        <Button onClick={openCreate} className="btn-primary">
           <Plus size={16} className="mr-2" />
           Add Project
         </Button>
@@ -271,6 +293,55 @@ function AdminPortfolio() {
                 onChange={(e) => setForm({ ...form, thumbnail: e.target.value })}
                 className="border-gray-800 bg-black"
               />
+              <div className="mt-2 text-xs text-gray-400">Or upload a file</div>
+              <input
+                type="file"
+                accept="image/*,video/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  try {
+                    const reader = new FileReader();
+                    reader.onload = async () => {
+                      const dataUrl = String(reader.result || "");
+                      // Upload to server
+                      const res = await fetch("/api/media", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          ...(token ? { Authorization: 'Bearer ' + token } : {}),
+                        },
+                        body: JSON.stringify({ data: dataUrl, filename: file.name, title: form.title, alt: form.shortDescription }),
+                      });
+                      const json = await res.json().catch(() => ({}));
+                      if (json.success && json.data) {
+                        setForm({ ...form, thumbnail: json.data.url });
+                      } else {
+                        setError(json.message || "Upload failed");
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : "Upload failed");
+                  }
+                }}
+                className="mt-2 text-sm text-white"
+              />
+              {form.thumbnail ? (
+                <div className="mt-3">
+                  <div className="text-xs text-gray-400 mb-1">Preview</div>
+                  <div className="w-40 h-24 bg-neutral-900 border border-gray-800 overflow-hidden rounded">
+                    {/* Attempt to render image/video thumbnail */}
+                    {form.thumbnail.includes("youtube.com") || form.thumbnail.includes("youtu.be") ? (
+                      <img src={getYouTubeThumb(form.thumbnail)} alt="preview" className="w-full h-full object-cover" />
+                    ) : form.thumbnail.includes("drive.google.com") ? (
+                      <img src={getDriveThumb(form.thumbnail)} alt="preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={form.thumbnail} alt="preview" className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                </div>
+              ) : null}
             </FormField>
             <FormField label="Status">
               <Select
@@ -305,7 +376,7 @@ function AdminPortfolio() {
             <Button
               onClick={handleSave}
               disabled={isSaving}
-              className="w-full bg-[var(--brand-red)] hover:brightness-110"
+              className="w-full btn-primary"
             >
               {isSaving ? "Saving..." : editing ? "Update Project" : "Create Project"}
             </Button>
@@ -324,3 +395,6 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
     </div>
   );
 }
+
+
+

@@ -29,7 +29,7 @@ export async function ensureInitialSeed() {
             "Graphics designer, video editor and motion graphics artist based in Dhaka, Bangladesh.",
         },
         contact: {
-          email: "merajhossain042@gmail.com",
+          email: "merajhossain.mcu@gmail.com",
           phone: "+880 1700 000 000",
           whatsapp: "+8801700000000",
           address: "Dhaka, Bangladesh",

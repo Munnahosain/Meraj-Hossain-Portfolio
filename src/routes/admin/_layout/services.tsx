@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { Plus, Trash2, Edit2, Check, X } from "lucide-react";
+import { fetchWithAuth } from "@/lib/admin-api";
 
 export const Route = createFileRoute("/admin/_layout/services")({
   component: AdminServices,
@@ -44,29 +45,17 @@ export function AdminServices() {
       const url = "/api/services";
       const method = editingId ? "PUT" : "POST";
       const body = editingId ? { _id: editingId, ...form } : form;
-
-      const res = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
+      await fetchWithAuth(token, url, { method, body: JSON.stringify(body) });
+      setForm({
+        number: `0${services.length + 1}`,
+        title: "",
+        description: "",
+        icon: "Palette",
+        displayOrder: services.length + 1,
+        active: true,
       });
-
-      const json = await res.json();
-      if (json.success) {
-        setForm({
-          number: `0${services.length + 1}`,
-          title: "",
-          description: "",
-          icon: "Palette",
-          displayOrder: services.length + 1,
-          active: true,
-        });
-        setEditingId(null);
-        fetchServices();
-      }
+      setEditingId(null);
+      fetchServices();
     } catch (e) {
       console.error(e);
     }
@@ -75,12 +64,8 @@ export function AdminServices() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this service?")) return;
     try {
-      const res = await fetch(`/api/services?id=${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json();
-      if (json.success) fetchServices();
+      await fetchWithAuth(token, `/api/services?id=${id}`, { method: "DELETE" });
+      fetchServices();
     } catch (e) {
       console.error(e);
     }
@@ -173,7 +158,7 @@ export function AdminServices() {
           <div className="flex gap-2 pt-2">
             <button
               type="submit"
-              className="flex-1 bg-[var(--brand-red)] text-white font-semibold py-2 rounded hover:brightness-110 transition-all flex items-center justify-center gap-2"
+              className="flex-1 btn-primary text-white font-semibold py-2 rounded transition-all flex items-center justify-center gap-2"
             >
               <Plus size={16} />
               {editingId ? "Update Service" : "Add Service"}
@@ -215,7 +200,7 @@ export function AdminServices() {
                 >
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs text-[var(--brand-red)] font-bold">
+                      <span className="font-mono text-xs text-[var(--primary)] font-bold">
                         {s.number}
                       </span>
                       <h3 className="font-semibold text-white">{s.title}</h3>
@@ -245,3 +230,5 @@ export function AdminServices() {
     </div>
   );
 }
+
+

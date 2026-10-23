@@ -14,7 +14,11 @@ export async function fetchWithAuth<T = unknown>(
   options: RequestInit = {},
 ): Promise<T> {
   const headers = new Headers(options.headers);
-  headers.set("Authorization", `Bearer ${token}`);
+  // Attach Bearer token when provided
+  if (token) {
+    headers.set("Authorization", 'Bearer ' + token);
+  }
+
   if (options.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
@@ -22,9 +26,9 @@ export async function fetchWithAuth<T = unknown>(
   const response = await fetch(url, { ...options, headers });
   const result = await response.json().catch(() => ({}));
 
-  if (!response.ok || result.success === false) {
+  if (!response.ok || (result && (result as any).success === false)) {
     throw new AdminApiError(
-      result.message || result.error || result.statusMessage || "Request failed",
+      (result && ((result as any).message || (result as any).error || (result as any).statusMessage)) || "Request failed",
       response.status,
     );
   }

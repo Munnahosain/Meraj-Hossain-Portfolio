@@ -17,8 +17,15 @@ export const Route = createFileRoute("/api/auth/check")({
 
         const payload = verifyToken(token);
         const allowedEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+        const viteAdminEmail = process.env.VITE_ADMIN_EMAIL?.trim().toLowerCase();
+        const devEmail = process.env.DEV_ADMIN_EMAIL?.trim().toLowerCase();
+        const viteDevEmail = process.env.VITE_DEV_ADMIN_EMAIL?.trim().toLowerCase();
 
-        if (!payload || payload.email !== allowedEmail) {
+        const allowedEmails = [allowedEmail, viteAdminEmail, devEmail, viteDevEmail].filter(
+          Boolean,
+        ) as string[];
+
+        if (!payload || !allowedEmails.includes(payload.email)) {
           return Response.json(
             { success: false, message: "Unauthorized - Invalid token" },
             { status: 401 },

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { Plus, Trash2, Edit2 } from "lucide-react";
+import { fetchWithAuth } from "@/lib/admin-api";
 
 export const Route = createFileRoute("/admin/_layout/experience")({
   component: AdminExperience,
@@ -43,28 +44,10 @@ export function AdminExperience() {
       const url = "/api/experience";
       const method = editingId ? "PUT" : "POST";
       const body = editingId ? { _id: editingId, ...form } : form;
-
-      const res = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
-
-      const json = await res.json();
-      if (json.success) {
-        setForm({
-          role: "",
-          org: "",
-          years: "2025 — Present",
-          note: "",
-          displayOrder: items.length + 1,
-        });
-        setEditingId(null);
-        fetchItems();
-      }
+      await fetchWithAuth(token, url, { method, body: JSON.stringify(body) });
+      setForm({ role: "", org: "", years: "2025 � Present", note: "", displayOrder: items.length + 1 });
+      setEditingId(null);
+      fetchItems();
     } catch (e) {
       console.error(e);
     }
@@ -73,12 +56,8 @@ export function AdminExperience() {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this experience entry?")) return;
     try {
-      const res = await fetch(`/api/experience?id=${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json();
-      if (json.success) fetchItems();
+      await fetchWithAuth(token, `/api/experience?id=${id}`, { method: "DELETE" });
+      fetchItems();
     } catch (e) {
       console.error(e);
     }
@@ -158,7 +137,7 @@ export function AdminExperience() {
           <div className="flex gap-2 pt-2">
             <button
               type="submit"
-              className="flex-1 bg-[var(--brand-red)] text-white font-semibold py-2 rounded hover:brightness-110 transition-all flex items-center justify-center gap-2"
+              className="flex-1 btn-primary text-white font-semibold py-2 rounded transition-all flex items-center justify-center gap-2"
             >
               <Plus size={16} />
               {editingId ? "Update Entry" : "Add Entry"}
@@ -180,7 +159,7 @@ export function AdminExperience() {
                   className="p-4 bg-black border border-gray-800 rounded-lg flex justify-between items-start"
                 >
                   <div>
-                    <span className="font-mono text-xs text-[var(--brand-red)]">{x.years}</span>
+                    <span className="font-mono text-xs text-[var(--primary)]">{x.years}</span>
                     <h3 className="font-bold text-white text-lg mt-1">{x.role}</h3>
                     <p className="text-xs text-gray-400 mt-0.5">{x.org}</p>
                     {x.note && <p className="text-sm text-gray-300 mt-2">{x.note}</p>}
@@ -217,3 +196,4 @@ export function AdminExperience() {
     </div>
   );
 }
+

@@ -20,12 +20,51 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const allowedEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-    if (!allowedEmail || email !== allowedEmail) {
+    const envAdminEmail =
+      process.env.ADMIN_EMAIL?.trim().toLowerCase() ||
+      process.env.VITE_ADMIN_EMAIL?.trim().toLowerCase();
+    const envDevEmail =
+      process.env.DEV_ADMIN_EMAIL?.trim().toLowerCase() ||
+      process.env.VITE_DEV_ADMIN_EMAIL?.trim().toLowerCase();
+
+    const envAdminPassword =
+      process.env.ADMIN_PASSWORD || process.env.VITE_ADMIN_PASS || "";
+    const envDevPassword =
+      process.env.DEV_ADMIN_PASSWORD || process.env.VITE_DEV_ADMIN_PASS || envAdminPassword;
+
+    const isAllowedAdmin = envAdminEmail ? email === envAdminEmail : false;
+    const isAllowedDev = envDevEmail ? email === envDevEmail : false;
+    const isAllowed = isAllowedAdmin || isAllowedDev;
+
+    if (!isAllowed) {
       throw createError({
         statusCode: 403,
         statusMessage: "Access Denied. This email is not authorized to access the admin panel.",
       });
+    }
+
+    const envPasswordValid =
+      (isAllowedAdmin && envAdminPassword && password === envAdminPassword) ||
+      (isAllowedDev && envDevPassword && password === envDevPassword);
+
+    if (envPasswordValid) {
+      const token = generateToken({
+        id: isAllowedAdmin ? "admin-env" : "dev-admin",
+        email,
+      });
+
+      return {
+        success: true,
+        token,
+        user: {
+          id: isAllowedAdmin ? "admin-env" : "dev-admin",
+          email,
+          name: isAllowedDev
+            ? process.env.DEV_ADMIN_NAME || "Dev Admin"
+            : process.env.ADMIN_NAME || "Admin",
+          picture: process.env.DEV_ADMIN_PICTURE || process.env.ADMIN_PICTURE || "",
+        },
+      };
     }
 
     const user = await User.findOne({ email });

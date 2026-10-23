@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 export const Route = createFileRoute("/admin/login")({
   component: AdminLogin,
@@ -14,6 +14,14 @@ function AdminLogin() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const adminEmail =
+    import.meta.env.VITE_ADMIN_EMAIL ||
+    import.meta.env.VITE_DEV_ADMIN_EMAIL ||
+    "admin@example.com";
+  const adminPassword =
+    import.meta.env.VITE_ADMIN_PASS ||
+    import.meta.env.VITE_DEV_ADMIN_PASS ||
+    "Password123!";
 
   useEffect(() => {
     // If already logged in, redirect to dashboard
@@ -46,7 +54,7 @@ function AdminLogin() {
     }
   };
 
-  const handlePasswordLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handlePasswordLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
     setInfo("");
@@ -104,6 +112,21 @@ function AdminLogin() {
 
         <div className="bg-gray-950 border border-gray-800 rounded-lg p-8">
           <form onSubmit={handlePasswordLogin} className="space-y-4 mb-6">
+            {(import.meta.env.DEV || import.meta.env.VITE_SHOW_DEV_CREDS) && (
+              <div className="rounded-2xl border border-gray-800 bg-gray-950 p-4 mb-4">
+                <div className="text-xs uppercase tracking-[0.35em] text-gray-500 mb-3">
+                  Admin credentials
+                </div>
+                <div className="grid gap-2 text-sm text-gray-300">
+                  <div>
+                    <span className="font-semibold text-white">Email:</span> {adminEmail}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-white">Password:</span> {adminPassword}
+                  </div>
+                </div>
+              </div>
+            )}
             <div>
               <label className="block text-sm text-gray-400 mb-2" htmlFor="admin-email">
                 Email
@@ -159,8 +182,8 @@ function AdminLogin() {
                <button
                  type="button"
                  onClick={() => {
-                   const devEmail = import.meta.env.VITE_DEV_ADMIN_EMAIL || "admin@example.com";
-                   const devPass = import.meta.env.VITE_DEV_ADMIN_PASS || "password123";
+                   const devEmail = import.meta.env.VITE_DEV_ADMIN_EMAIL || adminEmail;
+                   const devPass = import.meta.env.VITE_DEV_ADMIN_PASS || adminPassword;
                    setEmail(devEmail);
                    setPassword(devPass);
                  }}
@@ -171,8 +194,8 @@ function AdminLogin() {
                <button
                  type="button"
                  onClick={async () => {
-                   const devEmail = import.meta.env.VITE_DEV_ADMIN_EMAIL || "admin@example.com";
-                   const devPass = import.meta.env.VITE_DEV_ADMIN_PASS || "password123";
+                   const devEmail = import.meta.env.VITE_DEV_ADMIN_EMAIL || adminEmail;
+                   const devPass = import.meta.env.VITE_DEV_ADMIN_PASS || adminPassword;
                    setEmail(devEmail);
                    setPassword(devPass);
                    setIsSubmitting(true);
