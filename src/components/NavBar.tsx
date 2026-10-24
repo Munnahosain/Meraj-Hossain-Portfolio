@@ -22,8 +22,8 @@ export function NavBar() {
 
   return (
     <nav
-      className="fixed inset-x-0 top-0 z-[9999] flex items-center justify-between px-4 py-4 backdrop-blur-md sm:px-6 md:px-12 md:py-5"
-      style={{ backgroundColor: "rgba(4,10,7,0.72)", borderBottom: "1px solid var(--border)" }}
+      className="fixed inset-x-0 top-0 z-[9999] flex items-center justify-between px-4 py-4 sm:px-6 md:px-12 md:py-5"
+      style={{ backgroundColor: "rgba(4,10,7,0.94)", borderBottom: "1px solid var(--border)" }}
     >
       <Link to="/" className="flex items-center gap-2 font-mono text-sm tracking-widest">
         {logoImg ? (

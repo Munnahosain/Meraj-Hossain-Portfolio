@@ -728,8 +728,7 @@ a:hover { color: var(--accent); text-decoration: none; }
 
 .contact-card {
   border-radius: 18px;
-  background: rgba(4, 10, 7, 0.6);
-  backdrop-filter: blur(16px);
+  background: rgba(4, 10, 7, 0.85);
 }
 
 /* Small utility to ease headings similar to reference */
