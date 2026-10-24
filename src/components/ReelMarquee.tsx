@@ -18,6 +18,12 @@ const RIB_STRIP_W = RIB_COUNT * RIB_WIDTH;
 const R_LABEL = 5; // major tick every N ribs (used for ratio calc)
 const WHEEL_TICK = RIB_WIDTH; // px per "tick" for ratio math
 
+// ── 3D curved-wall geometry ───────────────────────────────────────
+const PERSPECTIVE = 1100; // px — lower = stronger perspective
+const MAX_ROTATE = 38; // deg — how far the outer cells turn toward the centre
+const EDGE_DEPTH = 70; // px — outer cells pull slightly toward the viewer
+const EDGE_FADE = 0.4; // opacity lost at the outermost cells
+
 // ─────────────────────────────────────────────────────────────────
 export function ReelMarquee({ images }: { images?: string[] }) {
   const activeShots = useMemo(
@@ -47,6 +53,10 @@ export function ReelMarquee({ images }: { images?: string[] }) {
     glideRaf: 0,
     inView: false,
     reducedMotion: false,
+    cells: [] as HTMLElement[],
+    cellW: 0,
+    stride: 0, // cell width + gap
+    frameW: 0,
   });
 
   // ── Paint DOM ──────────────────────────────────────────────────
@@ -57,6 +67,20 @@ export function ReelMarquee({ images }: { images?: string[] }) {
     if (trackRef.current && halfWidth > 0) {
       const w = ((offset % halfWidth) + halfWidth) % halfWidth;
       trackRef.current.style.transform = `translateX(-${w}px)`;
+
+      // Curve the strip: turn each cell by how far it sits from the centre.
+      const { cells, cellW, stride, frameW } = s.current;
+      const half = frameW / 2;
+      if (half > 0) {
+        for (let i = 0; i < cells.length; i++) {
+          const cx = i * stride + cellW / 2 - w;
+          const n = Math.max(-1.6, Math.min(1.6, (cx - half) / half));
+          const n2 = Math.min(1, n * n);
+          const cell = cells[i];
+          cell.style.transform = `translateZ(${(n2 * EDGE_DEPTH).toFixed(1)}px) rotateY(${(-n * MAX_ROTATE).toFixed(2)}deg)`;
+          cell.style.opacity = String(1 - EDGE_FADE * n2);
+        }
+      }
     }
 
     // Wheel ribs: shift strip so centre aligns when offset=0
@@ -179,9 +203,14 @@ export function ReelMarquee({ images }: { images?: string[] }) {
       const secondCopy = el.children.item(activeShots.length);
       if (!(firstCopy instanceof HTMLElement) || !(secondCopy instanceof HTMLElement)) return;
 
-      const width = secondCopy.getBoundingClientRect().left - firstCopy.getBoundingClientRect().left;
+      // offsetLeft ignores CSS transforms (getBoundingClientRect would include the 3D tilt)
+      const width = secondCopy.offsetLeft - firstCopy.offsetLeft;
       if (width <= 0) return;
       state.halfWidth = width;
+      state.cells = Array.from(el.children) as HTMLElement[];
+      state.cellW = firstCopy.offsetWidth;
+      state.stride = width / activeShots.length;
+      state.frameW = el.parentElement?.clientWidth ?? 0;
       state.offset = ((state.offset % width) + width) % width;
       const perImage = width / activeShots.length;
       state.rulerRatio = (R_LABEL * WHEEL_TICK) / perImage;
@@ -191,6 +220,7 @@ export function ReelMarquee({ images }: { images?: string[] }) {
     measure();
     const resizeObserver = new ResizeObserver(measure);
     resizeObserver.observe(el);
+    if (el.parentElement) resizeObserver.observe(el.parentElement);
 
     const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
     state.reducedMotion = motionPreference.matches;
@@ -245,14 +275,32 @@ export function ReelMarquee({ images }: { images?: string[] }) {
   return (
     <div ref={frameRef} className="relative w-full select-none hero-marquee-frame">
       <div
-        className="relative w-full overflow-hidden py-1 hero-marquee-inner"
-        style={{ cursor: "grab", touchAction: "pan-y" }}
+        className="relative w-full overflow-hidden py-8 hero-marquee-inner"
+        style={{
+          cursor: "grab",
+          touchAction: "pan-y",
+          perspective: `${PERSPECTIVE}px`,
+          perspectiveOrigin: "50% 50%",
+        }}
         onPointerDown={(e) => onDown(e, "img")}
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerLeave={onUp}
       >
-        <div ref={trackRef} className="flex gap-6 w-max will-change-transform">
+        {/* soft brand-green glow on both edges */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 md:w-32 bg-gradient-to-r from-[rgba(25,194,130,0.22)] to-transparent"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 md:w-32 bg-gradient-to-l from-[rgba(25,194,130,0.22)] to-transparent"
+        />
+        <div
+          ref={trackRef}
+          className="flex gap-6 w-max will-change-transform"
+          style={{ transformStyle: "preserve-3d" }}
+        >
           {doubledShots.map((src, i) => (
             <div
               key={i}
