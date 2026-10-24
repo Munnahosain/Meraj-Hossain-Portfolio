@@ -18,5 +18,5 @@ export function Timecode() {
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
-  return <span className="font-mono text-xs tracking-widest text-white/70">{time}</span>;
+  return <span className="inline-block min-w-[11ch] text-right font-mono text-xs tracking-widest text-white/70">{time}</span>;
 }
