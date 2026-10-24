@@ -157,8 +157,8 @@
 
   100% {
     opacity: 1;
-    transform: translateY(0);
-    filter: blur(0);
+    transform: none;
+    filter: none; /* a held blur(0) keeps the whole subtree in an offscreen filter layer */
   }
 }
 
@@ -412,7 +412,6 @@
 
 .hero-name {
   opacity: 0;
-  will-change: clip-path, opacity, transform;
 }
 
 .hero-first {

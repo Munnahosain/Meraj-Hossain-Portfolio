@@ -99,13 +99,18 @@ export function InteractiveJ() {
     };
 
     const renderIcons = () => {
+      // transform-only: moving left/top every frame forces layout, transform stays on the compositor
       iconBodies.forEach(({ body, el }) => {
         if (!el) return;
-        el.style.left = `${body.position.x}px`;
-        el.style.top = `${body.position.y}px`;
-        el.style.transform = `translate(-50%, -50%) rotate(${body.angle}rad)`;
+        el.style.transform = `translate3d(${body.position.x}px, ${body.position.y}px, 0) translate(-50%, -50%) rotate(${body.angle}rad)`;
       });
     };
+    iconBodies.forEach(({ el }) => {
+      if (!el) return;
+      el.style.left = "0px";
+      el.style.top = "0px";
+    });
+    renderIcons();
     Events.on(engine, "afterUpdate", renderIcons);
 
     const intersectionObserver = new IntersectionObserver(([entry]) => {

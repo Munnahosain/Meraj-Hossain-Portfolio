@@ -312,6 +312,7 @@ export function ReelMarquee({ images }: { images?: string[] }) {
                 width={800}
                 height={1000}
                 loading="lazy"
+                decoding="async"
                 draggable={false}
                 onError={(event) => {
                   event.currentTarget.src = DEFAULT_REEL_IMAGES[i % DEFAULT_REEL_IMAGES.length];
