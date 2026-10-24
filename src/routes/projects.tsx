@@ -131,10 +131,10 @@ function ProjectsPage() {
                       onError={(event) => {
                         event.currentTarget.src = reel1;
                       }}
-                      className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700"
+                      className="w-full h-full object-cover grayscale-[20%] group-hover:scale-105 transition-transform duration-700"
                     />
                   )}
-                  <div className="absolute top-6 left-6 font-mono text-[10px] uppercase tracking-widest bg-black/60 backdrop-blur px-2 py-1 border border-white/10">
+                  <div className="absolute top-6 left-6 font-mono text-[10px] uppercase tracking-widest bg-black/75 px-2 py-1 border border-white/10">
                     {p.cat}
                   </div>
                 </div>

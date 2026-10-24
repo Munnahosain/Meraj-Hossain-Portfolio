@@ -300,13 +300,13 @@ function Index() {
                     onError={(event) => {
                       event.currentTarget.src = reel1;
                     }}
-                    className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700"
+                    className="w-full h-full object-cover grayscale-[20%] group-hover:scale-105 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity" />
-                  <div className="absolute top-6 left-6 font-mono text-[10px] uppercase tracking-widest bg-black/40 backdrop-blur px-2 py-1 border border-[var(--border)] text-[var(--muted-foreground)]">
+                  <div className="absolute top-6 left-6 font-mono text-[10px] uppercase tracking-widest bg-black/70 px-2 py-1 border border-[var(--border)] text-[var(--muted-foreground)]">
                     {p.cat}
                   </div>
-                  <div className="absolute bottom-6 right-6 w-12 h-12 rounded-full border border-white/30 grid place-items-center backdrop-blur bg-black/40 group-hover:bg-[var(--primary)] group-hover:border-[var(--primary)] transition-all">
+                  <div className="absolute bottom-6 right-6 w-12 h-12 rounded-full border border-white/30 grid place-items-center bg-black/70 group-hover:bg-[var(--primary)] group-hover:border-[var(--primary)] transition-colors">
                     <span className="text-white text-lg">→</span>
                   </div>
                 </div>
