@@ -11,6 +11,8 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import antonFont from "@fontsource/anton/files/anton-latin-400-normal.woff2?url";
+import interFont from "@fontsource/inter/files/inter-latin-400-normal.woff2?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Preloader } from "../components/Preloader";
 import Lenis from "lenis";
@@ -94,12 +96,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap",
-      },
+      // Hero font + body font load in parallel with the CSS instead of after it
+      { rel: "preload", as: "font", type: "font/woff2", href: antonFont, crossOrigin: "anonymous" },
+      { rel: "preload", as: "font", type: "font/woff2", href: interFont, crossOrigin: "anonymous" },
     ],
   }),
   shellComponent: RootShell,

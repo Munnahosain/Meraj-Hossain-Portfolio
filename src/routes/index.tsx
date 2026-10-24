@@ -11,6 +11,7 @@ import reel6 from "@/assets/reel-06.jpg";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { InteractiveJ } from "@/components/Hero/InteractiveJ";
 import { getImageSrc } from "@/lib/utils";
+import { getSettingsSSR } from "@/lib/home-data";
 import {
   useWebsiteSettings,
   useCMSProjects,
@@ -21,6 +22,7 @@ import {
 
 export const Route = createFileRoute("/")({
   component: Index,
+  loader: () => getSettingsSSR(),
   head: () => ({
     meta: [
       { title: "Meraj Hossain — Graphics Designer & Motion Artist" },
@@ -107,7 +109,8 @@ const defaultExp = [
 ];
 
 function Index() {
-  const { data: settings } = useWebsiteSettings();
+  const ssrSettings = Route.useLoaderData();
+  const { data: settings } = useWebsiteSettings(ssrSettings);
   const { data: dbProjects } = useCMSProjects();
   const { data: dbServices } = useCMSServices();
   const { data: dbSkills } = useCMSSkills();
@@ -196,7 +199,9 @@ function Index() {
             <img
               src={getImageSrc(heroImage)}
               alt={`${heroTitle} Portrait`}
-              className="h-[105%] md:h-[115%] w-auto object-contain object-center transition-transform duration-700 ease-out will-change-transform"
+              fetchPriority="high"
+              decoding="async"
+              className="aspect-square h-[105%] md:h-[115%] w-auto object-contain object-center transition-transform duration-700 ease-out will-change-transform"
             />
           </div>
 

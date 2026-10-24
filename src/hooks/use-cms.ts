@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 
-export function useWebsiteSettings() {
+export function useWebsiteSettings(initialData?: Record<string, unknown> | null) {
   return useQuery({
     queryKey: ["website-settings"],
+    initialData: initialData ?? undefined,
     queryFn: async () => {
       const res = await fetch("/api/settings");
       const json = await res.json();
