@@ -19,10 +19,12 @@ const R_LABEL = 5; // major tick every N ribs (used for ratio calc)
 const WHEEL_TICK = RIB_WIDTH; // px per "tick" for ratio math
 
 // ── 3D curved-wall geometry ───────────────────────────────────────
-const PERSPECTIVE = 1100; // px — lower = stronger perspective
-const MAX_ROTATE = 38; // deg — how far the outer cells turn toward the centre
-const EDGE_DEPTH = 70; // px — outer cells pull slightly toward the viewer
-const EDGE_FADE = 0.4; // opacity lost at the outermost cells
+// Cells sit on the inside of a cylinder: centre is flat, the edges wrap toward the viewer.
+const EDGE_ANGLE = 0.72; // rad (~41°) — how far round the cylinder the frame edge is
+const THETA_CLAMP = 1.0; // rad — cells further out than this are off-screen anyway
+const EDGE_FADE = 0.35; // opacity lost at the frame edge
+const PERSPECTIVE_RATIO = 0.9; // perspective distance as a fraction of frame width
+const PERSPECTIVE_MIN = 900; // px
 
 // ─────────────────────────────────────────────────────────────────
 export function ReelMarquee({ images }: { images?: string[] }) {
@@ -57,6 +59,7 @@ export function ReelMarquee({ images }: { images?: string[] }) {
     cellW: 0,
     stride: 0, // cell width + gap
     frameW: 0,
+    radius: 0, // cylinder radius in px
   });
 
   // ── Paint DOM ──────────────────────────────────────────────────
@@ -68,17 +71,19 @@ export function ReelMarquee({ images }: { images?: string[] }) {
       const w = ((offset % halfWidth) + halfWidth) % halfWidth;
       trackRef.current.style.transform = `translateX(-${w}px)`;
 
-      // Curve the strip: turn each cell by how far it sits from the centre.
-      const { cells, cellW, stride, frameW } = s.current;
+      // Wrap the strip round a cylinder: x → arc angle, then place + tilt each cell on it.
+      const { cells, cellW, stride, frameW, radius } = s.current;
       const half = frameW / 2;
-      if (half > 0) {
+      if (half > 0 && radius > 0) {
         for (let i = 0; i < cells.length; i++) {
-          const cx = i * stride + cellW / 2 - w;
-          const n = Math.max(-1.6, Math.min(1.6, (cx - half) / half));
-          const n2 = Math.min(1, n * n);
+          const x = i * stride + cellW / 2 - w - half; // px from the frame centre
+          const th = Math.max(-THETA_CLAMP, Math.min(THETA_CLAMP, x / radius));
+          const dx = radius * Math.sin(th) - x; // pull inward as the surface curves away
+          const z = radius * (1 - Math.cos(th)); // edges come toward the viewer
+          const f = Math.min(1, (th / EDGE_ANGLE) ** 2);
           const cell = cells[i];
-          cell.style.transform = `translateZ(${(n2 * EDGE_DEPTH).toFixed(1)}px) rotateY(${(-n * MAX_ROTATE).toFixed(2)}deg)`;
-          cell.style.opacity = String(1 - EDGE_FADE * n2);
+          cell.style.transform = `translate3d(${dx.toFixed(1)}px,0,${z.toFixed(1)}px) rotateY(${(-th).toFixed(4)}rad)`;
+          cell.style.opacity = String(1 - EDGE_FADE * f);
         }
       }
     }
@@ -211,6 +216,10 @@ export function ReelMarquee({ images }: { images?: string[] }) {
       state.cellW = firstCopy.offsetWidth;
       state.stride = width / activeShots.length;
       state.frameW = el.parentElement?.clientWidth ?? 0;
+      state.radius = state.frameW / 2 / EDGE_ANGLE;
+      if (el.parentElement) {
+        el.parentElement.style.perspective = `${Math.max(PERSPECTIVE_MIN, state.frameW * PERSPECTIVE_RATIO)}px`;
+      }
       state.offset = ((state.offset % width) + width) % width;
       const perImage = width / activeShots.length;
       state.rulerRatio = (R_LABEL * WHEEL_TICK) / perImage;
@@ -275,11 +284,11 @@ export function ReelMarquee({ images }: { images?: string[] }) {
   return (
     <div ref={frameRef} className="relative w-full select-none hero-marquee-frame">
       <div
-        className="relative w-full overflow-hidden py-8 hero-marquee-inner"
+        className="relative w-full overflow-hidden py-12 hero-marquee-inner"
         style={{
           cursor: "grab",
           touchAction: "pan-y",
-          perspective: `${PERSPECTIVE}px`,
+          perspective: `${PERSPECTIVE_MIN}px`, // replaced with a width-based value on measure
           perspectiveOrigin: "50% 50%",
         }}
         onPointerDown={(e) => onDown(e, "img")}
@@ -298,21 +307,19 @@ export function ReelMarquee({ images }: { images?: string[] }) {
         />
         <div
           ref={trackRef}
-          className="flex gap-6 w-max will-change-transform"
+          className="flex gap-6 w-max"
           style={{ transformStyle: "preserve-3d" }}
         >
           {doubledShots.map((src, i) => (
             <div
               key={i}
-              className="relative w-[220px] md:w-[280px] aspect-[4/5] shrink-0 overflow-hidden bg-neutral-900 filmstrip-cell"
+              className="relative w-[220px] md:w-[280px] aspect-[4/5] shrink-0 bg-neutral-900 filmstrip-cell"
             >
               <img
                 src={getImageSrc(src)}
                 alt=""
                 width={800}
                 height={1000}
-                loading="lazy"
-                decoding="async"
                 draggable={false}
                 onError={(event) => {
                   event.currentTarget.src = DEFAULT_REEL_IMAGES[i % DEFAULT_REEL_IMAGES.length];

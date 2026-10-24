@@ -550,7 +550,8 @@
 
 .filmstrip-cell {
   position: relative;
-  overflow: hidden;
+  /* no overflow clip: clipping a 3D-transformed layer makes Chrome drop its tiles mid-scroll */
+  backface-visibility: hidden;
   border-radius: 0;
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.22);
 }
