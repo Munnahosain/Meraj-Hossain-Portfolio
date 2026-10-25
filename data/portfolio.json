@@ -1,0 +1,265 @@
+{
+  "profile": {
+    "name": "Meraj Hossain",
+    "title": "Graphics Designer | Video Editor | Motion Graphics Designer",
+    "subtitle": "Visual Storyteller & Motion Designer",
+    "headline": "I craft compelling visual storytelling across motion graphics, video editing, and brand design",
+    "location": "Savar, Dhaka, Bangladesh",
+    "timezoneOffset": 6,
+    "avatarImage": "/assets/meraj-profile.png",
+    "email": "munnahosain042@gmail.com",
+    "phone": "+88013-00294781",
+    "address": "1216 Nagar Kanda, Savar, Dhaka",
+    "linkedin": "https://linkedin.com/in/merajhossain47",
+    "aboutText": {
+      "intro": "Creative Graphics Designer and Motion Graphics Artist with proven experience in branding, social media design, video editing, and promotional content.",
+      "background": "Skilled in Adobe Creative Suite and passionate about visual storytelling, creative problem solving, and delivering high-quality designs for digital and print media.",
+      "philosophy": "Every frame matters. I strip away the superfluous and elevate visual rhythm, kinetic motion, and color harmony to make stories felt, not just seen."
+    },
+    "skills": [
+      {
+        "category": "Core Disciplines",
+        "items": [
+          "Motion Graphics",
+          "Video Editing",
+          "Graphic Design",
+          "Color Grading",
+          "Branding Design",
+          "Visual Storytelling"
+        ]
+      },
+      {
+        "category": "Software & Tools",
+        "items": [
+          "Adobe After Effects",
+          "Adobe Premiere Pro",
+          "Adobe Photoshop",
+          "Adobe Illustrator",
+          "Microsoft Office"
+        ]
+      }
+    ],
+    "experience": [
+      {
+        "role": "Graphics Designer",
+        "company": "Micro Electronic, Dhaka",
+        "period": "2025 - Present",
+        "description": [
+          "Design promotional materials for marketing campaigns.",
+          "Create social media creatives and print designs.",
+          "Develop branding and advertising materials."
+        ]
+      },
+      {
+        "role": "Contributor",
+        "company": "Adobe Stock",
+        "period": "2023 - Present",
+        "description": [
+          "Create and upload motion graphics templates.",
+          "Design stock assets for global clients.",
+          "Produce high-quality visual content."
+        ]
+      },
+      {
+        "role": "Computer Operator",
+        "company": "KBS Network, Savar",
+        "period": "2022 - 2025",
+        "description": [
+          "Managed office documentation.",
+          "Supported media and promotional projects.",
+          "Assisted in technical and administrative tasks."
+        ]
+      }
+    ],
+    "education": [
+      {
+        "degree": "Secondary School Certificate (SSC)",
+        "institution": "Kondia High School & College",
+        "year": "2024"
+      },
+      {
+        "degree": "Maulana (Quran Analyze)",
+        "institution": "Jamia Islamia Arabia, Savar",
+        "year": "2020"
+      },
+      {
+        "degree": "Hafiz (Quran Memorization)",
+        "institution": "Nurul Quran Al-Islamia Academy",
+        "year": "2014"
+      }
+    ],
+    "values": [
+      {
+        "number": "01",
+        "title": "Craft & Precision",
+        "description": "Deep mastery of keyframing, typography pacing, and color grading. Every cut, transition, and pixel is tuned to create lasting impact."
+      },
+      {
+        "number": "02",
+        "title": "Visual Storytelling",
+        "description": "Motion design exists to tell an unmistakable story. Bringing ideas and brands to life through dynamic energy and emotion."
+      },
+      {
+        "number": "03",
+        "title": "Continuous Evolution",
+        "description": "Pushing boundaries with cutting-edge motion trends, visual effects, and modern digital art aesthetics."
+      }
+    ],
+    "process": [
+      {
+        "step": "01",
+        "title": "Observe & Concept",
+        "sub": "Clear Foundation",
+        "description": "Deep understanding of the brief, audience context, and core narrative before touching the timeline."
+      },
+      {
+        "step": "02",
+        "title": "Storyboard & Styleframe",
+        "sub": "Defined Territories",
+        "description": "Designing visual styleframes, motion boards, and color palettes for seamless client alignment."
+      },
+      {
+        "step": "03",
+        "title": "Motion & Animation",
+        "sub": "Dynamic Execution",
+        "description": "Breathing life into vector assets with fluid easing curves, 3D layer depth, and kinetic rhythm in After Effects."
+      },
+      {
+        "step": "04",
+        "title": "Color Grade & Sound Sync",
+        "sub": "Sensory Polish",
+        "description": "Fine-tuning exposure, cinematic LUTs, and syncing beats to deliver broadcast-level punch."
+      },
+      {
+        "step": "05",
+        "title": "Delivery & Multi-Format",
+        "sub": "Production Ready",
+        "description": "Exporting pristine high-res deliverables optimized for social feeds, digital billboards, and broadcast."
+      }
+    ],
+    "clients": [
+      "Micro Electronic",
+      "Adobe Stock",
+      "KBS Network",
+      "Commercial Video Campaigns",
+      "Motion Graphics Templates",
+      "Brand Identity Systems"
+    ]
+  },
+  "caseStudies": [
+    {
+      "id": "micro-electronic-campaign",
+      "slug": "micro-electronic-campaign",
+      "title": "micro electronic\ncampaign",
+      "client": "MICRO ELECTRONIC",
+      "year": "2025",
+      "category": "BRANDING & PRINT",
+      "role": "BRANDING / PRINT COLLATERAL",
+      "coverImage": "/assets/reel-01.jpg",
+      "description": "Branding and print collateral for a tech hardware product launch, including campaign posters, social media assets, and product packaging.",
+      "contentMedia": [
+        {
+          "type": "image",
+          "src": "/assets/reel-01.jpg",
+          "caption": "Product launch campaign artwork",
+          "aspect": "square"
+        }
+      ]
+    },
+    {
+      "id": "adobe-stock-motion-pack",
+      "slug": "adobe-stock-motion-pack",
+      "title": "adobe stock\nmotion pack",
+      "client": "ADOBE STOCK",
+      "year": "2024",
+      "category": "MOTION GRAPHICS",
+      "role": "AFTER EFFECTS MOTION TEMPLATES",
+      "coverImage": "/assets/reel-03.jpg",
+      "description": "Custom After Effects motion graphics templates created for stock licensing, including kinetic title templates and lower thirds.",
+      "contentMedia": [
+        {
+          "type": "image",
+          "src": "/assets/reel-03.jpg",
+          "caption": "Motion graphics template artwork",
+          "aspect": "square"
+        }
+      ]
+    },
+    {
+      "id": "social-reels-series",
+      "slug": "social-reels-series",
+      "title": "social reels\nseries",
+      "client": "SELECTED WORK",
+      "year": "2025",
+      "category": "VIDEO EDITING",
+      "role": "SHORT-FORM VIDEO EDITING",
+      "coverImage": "/assets/reel-05.jpg",
+      "description": "Short-form video cuts for digital brands, using dynamic captions, sound design, and speed ramping.",
+      "contentMedia": [
+        {
+          "type": "image",
+          "src": "/assets/reel-05.jpg",
+          "caption": "Social campaign creative",
+          "aspect": "square"
+        }
+      ]
+    },
+    {
+      "id": "promo-cutdowns",
+      "slug": "promo-cutdowns",
+      "title": "promo\ncutdowns",
+      "client": "SELECTED WORK",
+      "year": "2024",
+      "category": "PROMO & COLOR",
+      "role": "VIDEO EDITING / COLOR GRADING",
+      "coverImage": "/assets/reel-06.jpg",
+      "description": "Commercial campaign cutdowns and color grading for web and broadcast delivery.",
+      "contentMedia": [
+        {
+          "type": "image",
+          "src": "/assets/reel-06.jpg",
+          "caption": "Commercial campaign creative",
+          "aspect": "square"
+        }
+      ]
+    }
+  ],
+  "archiveItems": [
+    {
+      "id": "archive-micro-electronic-campaign",
+      "number": "01",
+      "title": "micro electronic campaign",
+      "category": "BRANDING & PRINT",
+      "year": "2025",
+      "type": "image",
+      "src": "/assets/reel-01.jpg"
+    },
+    {
+      "id": "archive-adobe-stock-motion-pack",
+      "number": "02",
+      "title": "adobe stock motion pack",
+      "category": "MOTION GRAPHICS",
+      "year": "2024",
+      "type": "image",
+      "src": "/assets/reel-03.jpg"
+    },
+    {
+      "id": "archive-social-reels-series",
+      "number": "03",
+      "title": "social reels series",
+      "category": "VIDEO EDITING",
+      "year": "2025",
+      "type": "image",
+      "src": "/assets/reel-05.jpg"
+    },
+    {
+      "id": "archive-promo-cutdowns",
+      "number": "04",
+      "title": "promo cutdowns",
+      "category": "PROMO & COLOR",
+      "year": "2024",
+      "type": "image",
+      "src": "/assets/reel-06.jpg"
+    }
+  ]
+}
