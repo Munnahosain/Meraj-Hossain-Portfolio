@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { AnimatePresence, animate, motion, useMotionValue, useTransform } from 'framer-motion';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { animate, motion, useMotionValue, useTransform } from 'framer-motion';
+import gsap from 'gsap';
 import { ViewMode, CaseStudy, PortfolioData } from './types';
 import { ARCHIVE_ITEMS, CASE_STUDIES, MERAJ_PROFILE } from './data/portfolioData';
 import { getTimeTheme } from './utils/timeColor';
@@ -27,7 +28,30 @@ export default function App() {
   const [selectedCase, setSelectedCase] = useState<CaseStudy | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
+  const viewTransitionRef = useRef<HTMLDivElement>(null);
   const menuProgress = useMotionValue(0);
+
+  useLayoutEffect(() => {
+    const view = viewTransitionRef.current;
+    if (!view) return;
+
+    const context = gsap.context(() => {
+      gsap.fromTo(
+        view,
+        { autoAlpha: 0, y: 20, clipPath: 'inset(0 0 7% 0)' },
+        {
+          autoAlpha: 1,
+          y: 0,
+          clipPath: 'inset(0 0 0% 0)',
+          duration: 0.65,
+          ease: 'power3.out',
+          clearProps: 'clipPath',
+        },
+      );
+    }, view);
+
+    return () => context.revert();
+  }, [view, selectedCase?.id]);
 
   useEffect(() => {
     const animation = animate(menuProgress, isMenuOpen ? 1 : 0, {
@@ -262,13 +286,9 @@ export default function App() {
       >
         {/* Keep the live home rail mounted while it becomes the menu's clipped hero window. */}
         {(!isMenuOpen || view === 'home') && (
-          <AnimatePresence mode="wait" initial={false}>
-          <motion.div
+          <div
             key={view === 'case-detail' ? selectedCase?.id || view : view}
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.42, ease: [0.76, 0, 0.24, 1] }}
+            ref={viewTransitionRef}
             className={`w-full ${view === 'home' ? 'h-full overflow-hidden' : 'min-h-full'}`}
             style={{ pointerEvents: isMenuOpen ? 'none' : 'auto' }}
           >
@@ -299,8 +319,7 @@ export default function App() {
                 theme={theme}
               />
             )}
-          </motion.div>
-          </AnimatePresence>
+          </div>
         )}
 
         {/* Menu framing over the live gallery window */}
