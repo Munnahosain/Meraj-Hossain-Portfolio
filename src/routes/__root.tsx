@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Preloader } from "../components/Preloader";
 import Lenis from "lenis";
+import { ScrollTrigger } from "../lib/gsap";
 
 function NotFoundComponent() {
   return (
@@ -152,6 +153,15 @@ function RootComponent() {
       gestureOrientation: "vertical",
       smoothWheel: true,
     });
+    const updateScrollTrigger = () => ScrollTrigger.update();
+    lenisInstance.on("scroll", updateScrollTrigger);
+
+    let isActive = true;
+    const refreshScrollTriggers = () => {
+      if (isActive) ScrollTrigger.refresh();
+    };
+    window.addEventListener("load", refreshScrollTriggers);
+    document.fonts?.ready.then(refreshScrollTriggers);
 
     let rafId: number | undefined;
     const raf = (time: number) => {
@@ -179,6 +189,9 @@ function RootComponent() {
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      isActive = false;
+      window.removeEventListener("load", refreshScrollTriggers);
+      lenisInstance.off("scroll", updateScrollTrigger);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       lenisInstance.destroy();
       if (rafId !== undefined) cancelAnimationFrame(rafId);
@@ -192,7 +205,9 @@ function RootComponent() {
       <div className="grain-overlay" aria-hidden="true" />
 
       {!isAdminRoute && !isLoaded && <Preloader onComplete={() => setIsLoaded(true)} />}
-      <div key={location.pathname} className="page-fade"><Outlet /></div>
+      <div key={location.pathname} className="page-fade">
+        <Outlet />
+      </div>
     </QueryClientProvider>
   );
 }

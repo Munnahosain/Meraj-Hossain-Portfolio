@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteChrome } from "@/components/SiteChrome";
+import { ScrollReveal } from "@/components/ScrollReveal";
 import meraj from "@/assets/meraj.jpg";
 
 export const Route = createFileRoute("/about")({
@@ -50,16 +51,16 @@ const education = [
 function AboutPage() {
   return (
     <SiteChrome>
-      <section className="px-6 md:px-12 py-16 md:py-24">
-        <div className="max-w-7xl mx-auto">
+      <section className="editorial-page-header px-6 md:px-12 py-16 md:py-24">
+        <ScrollReveal className="max-w-7xl mx-auto">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-red)] mb-6">
             The designer
           </div>
           <h1 className="font-display uppercase text-6xl md:text-[10rem] leading-[0.85]">About</h1>
-        </div>
+        </ScrollReveal>
       </section>
       <section className="px-6 md:px-12 pb-32">
-        <div className="max-w-7xl mx-auto grid md:grid-cols-12 gap-12">
+        <ScrollReveal className="editorial-page-body max-w-7xl mx-auto grid md:grid-cols-12 gap-12">
           <div className="md:col-span-4">
             <div className="relative aspect-[3/4] overflow-hidden bg-neutral-900 border border-white/10">
               <img
@@ -83,9 +84,9 @@ function AboutPage() {
               Good design earns attention. Great design earns memory.
             </p>
           </div>
-        </div>
+        </ScrollReveal>
 
-        <div className="max-w-7xl mx-auto mt-32">
+        <ScrollReveal className="max-w-7xl mx-auto mt-32">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-red)] mb-6">
             Skills
           </div>
@@ -99,9 +100,9 @@ function AboutPage() {
               </span>
             ))}
           </div>
-        </div>
+        </ScrollReveal>
 
-        <div className="max-w-7xl mx-auto mt-32">
+        <ScrollReveal className="max-w-7xl mx-auto mt-32">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-red)] mb-6">
             Education
           </div>
@@ -120,7 +121,7 @@ function AboutPage() {
               </div>
             ))}
           </div>
-        </div>
+        </ScrollReveal>
       </section>
     </SiteChrome>
   );

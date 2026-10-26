@@ -1,5 +1,42 @@
 import { useQuery } from "@tanstack/react-query";
 
+export interface CMSProject {
+  _id?: string;
+  title: string;
+  createdAt?: string | Date;
+  category?: string;
+  thumbnail?: string;
+  shortDescription?: string;
+  clientName?: string;
+  mediaInfo?: {
+    youtubeEmbed?: string;
+    googleDriveEmbed?: string;
+  };
+}
+
+export interface CMSService {
+  number?: string;
+  title: string;
+  description: string;
+}
+
+export interface CMSSkill {
+  name: string;
+  role?: string;
+  category?: string;
+}
+
+export interface CMSExperience {
+  position?: string;
+  role?: string;
+  company?: string;
+  org?: string;
+  period?: string;
+  years?: string;
+  description?: string;
+  note?: string;
+}
+
 export function useWebsiteSettings() {
   return useQuery({
     queryKey: ["website-settings"],
@@ -14,7 +51,7 @@ export function useWebsiteSettings() {
 }
 
 export function useCMSProjects(all = false) {
-  return useQuery({
+  return useQuery<CMSProject[]>({
     queryKey: ["cms-projects", all],
     queryFn: async () => {
       const res = await fetch(`/api/projects${all ? "?all=true" : ""}`);
@@ -27,7 +64,7 @@ export function useCMSProjects(all = false) {
 }
 
 export function useCMSServices() {
-  return useQuery({
+  return useQuery<CMSService[]>({
     queryKey: ["cms-services"],
     queryFn: async () => {
       const res = await fetch("/api/services");
@@ -40,7 +77,7 @@ export function useCMSServices() {
 }
 
 export function useCMSSkills() {
-  return useQuery({
+  return useQuery<CMSSkill[]>({
     queryKey: ["cms-skills"],
     queryFn: async () => {
       const res = await fetch("/api/skills");
@@ -53,7 +90,7 @@ export function useCMSSkills() {
 }
 
 export function useCMSExperience() {
-  return useQuery({
+  return useQuery<CMSExperience[]>({
     queryKey: ["cms-experience"],
     queryFn: async () => {
       const res = await fetch("/api/experience");

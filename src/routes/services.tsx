@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteChrome } from "@/components/SiteChrome";
+import { ScrollReveal } from "@/components/ScrollReveal";
 
 export const Route = createFileRoute("/services")({
   component: ServicesPage,
@@ -55,22 +56,26 @@ const services = [
 function ServicesPage() {
   return (
     <SiteChrome>
-      <section className="px-6 md:px-12 py-16 md:py-24">
-        <div className="max-w-7xl mx-auto">
+      <section className="editorial-page-header px-6 md:px-12 py-16 md:py-24">
+        <ScrollReveal className="max-w-7xl mx-auto">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-red)] mb-6">
             Capabilities
           </div>
           <h1 className="font-display uppercase text-6xl md:text-[10rem] leading-[0.85]">
             Services
           </h1>
-        </div>
+        </ScrollReveal>
       </section>
       <section className="px-6 md:px-12 pb-32">
-        <div className="max-w-7xl mx-auto divide-y divide-white/10 border-y border-white/10">
+        <ScrollReveal
+          stagger
+          staggerMs={70}
+          className="max-w-7xl mx-auto divide-y divide-white/10 border-y border-white/10"
+        >
           {services.map((s) => (
             <div
               key={s.n}
-              className="grid md:grid-cols-12 gap-8 py-10 md:py-14 group hover:bg-white/[0.02] transition-colors px-2"
+              className="service-row grid md:grid-cols-12 gap-5 md:gap-8 py-8 md:py-12 group hover:bg-white/[0.02] transition-colors px-2"
             >
               <div className="md:col-span-1 font-mono text-xs text-white/40">{s.n}</div>
               <h2 className="md:col-span-5 font-display uppercase text-4xl md:text-6xl group-hover:text-[var(--brand-red)] transition-colors">
@@ -82,7 +87,7 @@ function ServicesPage() {
               </div>
             </div>
           ))}
-        </div>
+        </ScrollReveal>
       </section>
     </SiteChrome>
   );

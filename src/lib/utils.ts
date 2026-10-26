@@ -28,3 +28,8 @@ export function getImageSrc(src: string) {
   }
   return legacyImageSources[src] || src;
 }
+
+export function getExternalUrl(url: string | undefined, fallback: string) {
+  const value = url?.trim() || fallback;
+  return /^https?:\/\//i.test(value) ? value : `https://${value.replace(/^\/+/, "")}`;
+}

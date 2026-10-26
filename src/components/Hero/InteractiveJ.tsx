@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bodies, Body, Engine, Events, Mouse, MouseConstraint, Runner, World } from "matter-js";
+import Matter from "matter-js";
 import { iconPositions, Breakpoint } from "./iconPositions";
+
+const { Bodies, Body, Engine, Events, Mouse, MouseConstraint, Runner, World } = Matter;
 
 const getBreakpoint = (width: number): Breakpoint => {
   if (width < 640) return "mobile";
@@ -17,9 +19,7 @@ const initialOffsets = [
 ];
 
 export function InteractiveJ() {
-  const [breakpoint, setBreakpoint] = useState<Breakpoint>(() =>
-    typeof window !== "undefined" ? getBreakpoint(window.innerWidth) : "desktop",
-  );
+  const [breakpoint, setBreakpoint] = useState<Breakpoint>("desktop");
 
   const stageRef = useRef<HTMLDivElement | null>(null);
   const iconRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -126,7 +126,7 @@ export function InteractiveJ() {
       motionPreference.removeEventListener("change", syncRunner);
       Events.off(engine, "afterUpdate", renderIcons);
       Runner.stop(runner);
-      Mouse.clear(mouse);
+      Mouse.clearSourceEvents(mouse);
       World.remove(world, mouseConstraint);
       World.clear(world, false);
       Engine.clear(engine);

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 const imageTypes = {
   "image/avif": {
@@ -29,6 +29,24 @@ const imageTypes = {
 } as const;
 
 export type SupportedImageMimeType = keyof typeof imageTypes;
+
+const videoTypes = {
+  "video/mp4": {
+    extension: "mp4",
+    signature: (bytes: Buffer) => bytes.toString("ascii", 4, 12).includes("ftyp"),
+  },
+  "video/quicktime": {
+    extension: "mov",
+    signature: (bytes: Buffer) => bytes.toString("ascii", 4, 12).includes("ftyp"),
+  },
+  "video/webm": {
+    extension: "webm",
+    signature: (bytes: Buffer) => bytes.toString("hex", 0, 4) === "1a45dfa3",
+  },
+} as const;
+
+export type SupportedVideoMimeType = keyof typeof videoTypes;
+export type SupportedMediaMimeType = SupportedImageMimeType | SupportedVideoMimeType;
 
 export class R2StorageError extends Error {
   status: number;
@@ -101,6 +119,48 @@ export function getImageUploadLimit() {
   return limit;
 }
 
+export function getMediaUploadLimit() {
+  const configuredLimit = process.env.R2_MAX_UPLOAD_BYTES;
+  if (!configuredLimit) return 100 * 1024 * 1024;
+
+  const limit = Number(configuredLimit);
+  if (!Number.isSafeInteger(limit) || limit <= 0) {
+    throw new R2StorageError("R2_MAX_UPLOAD_BYTES must be a positive integer.", 500);
+  }
+  return limit;
+}
+
+export function validateMediaUpload(mimeType: string, fileBuffer: Buffer) {
+  if (Object.hasOwn(imageTypes, mimeType)) {
+    const imageType = imageTypes[mimeType as SupportedImageMimeType];
+    if (!imageType.signature(fileBuffer)) {
+      throw new R2StorageError("The uploaded file does not match its image type.", 400);
+    }
+    return {
+      mimeType: mimeType as SupportedImageMimeType,
+      extension: imageType.extension,
+      type: "image" as const,
+    };
+  }
+
+  if (Object.hasOwn(videoTypes, mimeType)) {
+    const videoType = videoTypes[mimeType as SupportedVideoMimeType];
+    if (!videoType.signature(fileBuffer)) {
+      throw new R2StorageError("The uploaded file does not match its video type.", 400);
+    }
+    return {
+      mimeType: mimeType as SupportedVideoMimeType,
+      extension: videoType.extension,
+      type: "video" as const,
+    };
+  }
+
+  throw new R2StorageError(
+    "Unsupported media format. Use JPEG, PNG, WebP, GIF, AVIF, MP4, MOV, or WebM.",
+    400,
+  );
+}
+
 export function validateImageUpload(mimeType: string, fileBuffer: Buffer) {
   if (!Object.hasOwn(imageTypes, mimeType)) {
     throw new R2StorageError("Unsupported image format. Use JPEG, PNG, WebP, GIF, or AVIF.", 400);
@@ -117,13 +177,14 @@ export function validateImageUpload(mimeType: string, fileBuffer: Buffer) {
   };
 }
 
-export async function uploadImageToR2(
+export async function uploadMediaToR2(
   fileBuffer: Buffer,
-  mimeType: SupportedImageMimeType,
+  mimeType: SupportedMediaMimeType,
   extension: string,
 ) {
   const config = getR2Config();
-  const key = `images/${randomUUID()}.${extension}`;
+  const folder = mimeType.startsWith("image/") ? "images" : "videos";
+  const key = `${folder}/${randomUUID()}.${extension}`;
 
   let baseUrl: URL;
   try {
@@ -164,4 +225,34 @@ export async function uploadImageToR2(
     key,
     url: `${config.publicBaseUrl}/${key.split("/").map(encodeURIComponent).join("/")}`,
   };
+}
+
+export async function uploadImageToR2(
+  fileBuffer: Buffer,
+  mimeType: SupportedImageMimeType,
+  extension: string,
+) {
+  return uploadMediaToR2(fileBuffer, mimeType, extension);
+}
+
+export async function deleteMediaFromR2(key: string) {
+  if (!/^(images|videos)\/[a-zA-Z0-9-]+\.[a-z0-9]+$/.test(key)) {
+    throw new R2StorageError("The media storage key is invalid.", 400);
+  }
+
+  const config = getR2Config();
+  try {
+    await getR2Client(config).send(
+      new DeleteObjectCommand({
+        Bucket: config.bucketName,
+        Key: key,
+      }),
+    );
+  } catch (error) {
+    console.error("Cloudflare R2 delete failed:", error);
+    throw new R2StorageError(
+      "Cloudflare R2 delete failed. Verify the bucket token, bucket name, and network connectivity.",
+      502,
+    );
+  }
 }

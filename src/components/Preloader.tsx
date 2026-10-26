@@ -19,7 +19,7 @@ export function Preloader({ onComplete }: PreloaderProps) {
       return;
     }
 
-    const duration = 1200; // 1.2 seconds
+    const duration = 300;
     const startTime = performance.now();
     let animationFrameId: number;
     let completionTimeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -43,8 +43,8 @@ export function Preloader({ onComplete }: PreloaderProps) {
           setIsFadingOut(true);
           fadeTimeoutId = setTimeout(() => {
             onCompleteRef.current();
-          }, 600);
-        }, 200);
+          }, 250);
+        }, 0);
       }
     };
 

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteChrome } from "@/components/SiteChrome";
-import { useCMSProjects } from "@/hooks/use-cms";
+import { ScrollReveal } from "@/components/ScrollReveal";
+import { useCMSProjects, type CMSProject } from "@/hooks/use-cms";
 import reel1 from "@/assets/reel-01.jpg";
 import reel2 from "@/assets/reel-02.jpg";
 import reel3 from "@/assets/reel-03.jpg";
@@ -26,7 +27,17 @@ export const Route = createFileRoute("/projects")({
   }),
 });
 
-const defaultAll = [
+interface ArchiveProject {
+  id?: string;
+  title: string;
+  year: string;
+  cat: string;
+  client: string;
+  img: string;
+  mediaInfo?: CMSProject["mediaInfo"];
+}
+
+const defaultAll: ArchiveProject[] = [
   {
     title: "Micro Electronic Campaign",
     year: "2025",
@@ -74,8 +85,8 @@ const defaultAll = [
 function ProjectsPage() {
   const { data: dbProjects } = useCMSProjects();
 
-  const displayProjects = dbProjects?.length
-    ? dbProjects.map((p: any) => ({
+  const displayProjects: ArchiveProject[] = dbProjects?.length
+    ? dbProjects.map((p: CMSProject) => ({
         id: p._id,
         title: p.title,
         year: p.createdAt ? new Date(p.createdAt).getFullYear().toString() : "2025",
@@ -88,27 +99,37 @@ function ProjectsPage() {
 
   return (
     <SiteChrome>
-      <section className="px-6 md:px-12 py-16 md:py-24">
-        <div className="max-w-7xl mx-auto">
-          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-red)] mb-6">
-            Archive / 2022 — {new Date().getFullYear()}
+      <section className="projects-page-intro px-5 py-16 sm:px-8 sm:py-20 md:px-12 md:py-24">
+        <ScrollReveal className="mx-auto max-w-7xl">
+          <div className="mb-5 flex items-center justify-between gap-4 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--brand-red)] sm:mb-6">
+            <span>Selected work / Archive</span>
+            <span>{String(displayProjects.length).padStart(2, "0")} works</span>
           </div>
-          <h1 className="font-display uppercase text-6xl md:text-[10rem] leading-[0.85]">
+          <h1 className="font-display text-6xl uppercase leading-[0.85] sm:text-7xl md:text-[10rem]">
             Projects
           </h1>
-        </div>
+          <p className="mt-6 max-w-xl text-sm leading-relaxed text-white/55 sm:text-base">
+            A selection of graphics, motion and video work.
+          </p>
+        </ScrollReveal>
       </section>
-      <section className="px-6 md:px-12 pb-32">
-        <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-10 md:gap-20">
-          {displayProjects.map((p: any, i: number) => {
+      <section className="px-5 pb-20 sm:px-8 sm:pb-24 md:px-12 md:pb-32">
+        <ScrollReveal
+          stagger
+          staggerMs={90}
+          className="projects-editorial-grid archive-project-grid mx-auto grid max-w-7xl grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:gap-x-10 lg:gap-y-16"
+        >
+          {displayProjects.map((p, i) => {
             const card = (
-              <article className={`group block ${i % 2 === 1 ? "md:mt-32" : ""}`}>
-                <div className="relative aspect-[4/5] overflow-hidden bg-neutral-900 border border-white/5">
+              <article className="project-card group block">
+                <div
+                  className={`project-card-inner relative overflow-hidden border border-white/10 bg-[var(--card)] ${i === 0 ? "aspect-[4/3]" : "aspect-[4/5]"}`}
+                >
                   {p.mediaInfo?.youtubeEmbed ? (
                     <iframe
                       src={p.mediaInfo.youtubeEmbed}
                       title={p.title}
-                      className="w-full h-full object-cover border-0"
+                      className="h-full w-full border-0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                       loading="lazy"
@@ -117,7 +138,7 @@ function ProjectsPage() {
                     <iframe
                       src={p.mediaInfo.googleDriveEmbed}
                       title={p.title}
-                      className="w-full h-full object-cover border-0"
+                      className="h-full w-full border-0"
                       allow="autoplay"
                       loading="lazy"
                     />
@@ -131,23 +152,31 @@ function ProjectsPage() {
                       onError={(event) => {
                         event.currentTarget.src = reel1;
                       }}
-                      className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700"
+                      className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.025]"
                     />
                   )}
-                  <div className="absolute top-6 left-6 font-mono text-[10px] uppercase tracking-widest bg-black/60 backdrop-blur px-2 py-1 border border-white/10">
+                  <div className="project-card-index absolute left-4 top-4 font-mono text-[10px] tracking-widest text-white/80 sm:left-5 sm:top-5">
+                    {String(i + 1).padStart(2, "0")}
+                  </div>
+                  <div className="absolute bottom-4 left-4 max-w-[calc(100%-4rem)] border border-white/10 bg-[rgba(4,10,7,0.7)] px-2.5 py-1.5 font-mono text-[9px] uppercase tracking-widest text-white/75 backdrop-blur sm:bottom-5 sm:left-5 sm:text-[10px]">
                     {p.cat}
                   </div>
+                  <div className="project-card-arrow absolute bottom-4 right-4 grid h-10 w-10 place-items-center rounded-full border border-white/40 bg-[rgba(4,10,7,0.55)] text-lg text-white backdrop-blur-sm transition-all duration-300 group-hover:border-[var(--primary)] group-hover:bg-[var(--primary)] sm:bottom-5 sm:right-5">
+                    <span aria-hidden="true">↗</span>
+                  </div>
                 </div>
-                <div className="mt-6 flex items-start justify-between gap-6">
+                <div className="mt-4 flex items-start justify-between gap-4 border-t border-white/10 pt-4 sm:mt-5">
                   <div>
-                    <h2 className="font-display uppercase text-3xl md:text-4xl group-hover:text-[var(--brand-red)] transition-colors">
+                    <h2 className="font-display text-2xl uppercase leading-tight transition-colors group-hover:text-[var(--brand-red)] md:text-3xl">
                       {p.title}
                     </h2>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-white/40 mt-2">
+                    <p className="mt-2 font-mono text-[9px] uppercase tracking-widest text-white/45 sm:text-[10px]">
                       {p.client}
                     </p>
                   </div>
-                  <span className="font-mono text-xs text-white/40 shrink-0">{p.year}</span>
+                  <span className="shrink-0 pt-1 font-mono text-[10px] text-white/45">
+                    {p.year}
+                  </span>
                 </div>
               </article>
             );
@@ -157,7 +186,8 @@ function ProjectsPage() {
                 key={p.id}
                 to="/project"
                 search={{ id: p.id }}
-                className={`block ${i % 2 === 1 ? "md:mt-32" : ""}`}
+                className="project-card block"
+                aria-label={`${p.title}, ${p.cat}, ${p.year}`}
               >
                 {card}
               </Link>
@@ -165,7 +195,7 @@ function ProjectsPage() {
               <div key={(p.title || "project") + i}>{card}</div>
             );
           })}
-        </div>
+        </ScrollReveal>
       </section>
     </SiteChrome>
   );

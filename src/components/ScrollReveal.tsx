@@ -1,12 +1,5 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  Children,
-  cloneElement,
-  isValidElement,
-  type ReactNode,
-} from "react";
+import { useRef, Children, isValidElement, type ReactNode } from "react";
+import { gsap, useGSAP } from "@/lib/gsap";
 
 interface ScrollRevealProps {
   children: ReactNode;
@@ -25,36 +18,46 @@ export function ScrollReveal({
   stagger = false,
   staggerMs = 80,
 }: ScrollRevealProps) {
-  const [isVisible, setIsVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduceMotion) {
-      setIsVisible(true);
-      return;
-    }
+  useGSAP(
+    () => {
+      const element = ref.current;
+      if (!element) return;
 
-    let visibilityTimeout: ReturnType<typeof setTimeout> | undefined;
+      const media = gsap.matchMedia();
+      media.add("(prefers-reduced-motion: no-preference)", () => {
+        const targets = stagger
+          ? gsap.utils.toArray<HTMLElement>(".scroll-reveal-item", element)
+          : [element];
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          visibilityTimeout = setTimeout(() => setIsVisible(true), delay);
-          observer.unobserve(el);
-        }
-      },
-      { threshold: 0.05, rootMargin: "0px 0px -40px 0px" },
-    );
+        if (!targets.length) return;
 
-    observer.observe(el);
-    return () => {
-      observer.unobserve(el);
-      if (visibilityTimeout) clearTimeout(visibilityTimeout);
-    };
-  }, [delay]);
+        gsap.fromTo(
+          targets,
+          { autoAlpha: 0, y: 24 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.7,
+            delay: delay / 1000,
+            stagger: stagger ? staggerMs / 1000 : 0,
+            ease: "power3.out",
+            clearProps: "opacity,visibility,transform",
+            scrollTrigger: {
+              trigger: element,
+              start: "top 88%",
+              once: true,
+              invalidateOnRefresh: true,
+            },
+          },
+        );
+      });
+
+      return () => media.revert();
+    },
+    { scope: ref, dependencies: [delay, stagger, staggerMs], revertOnUpdate: true },
+  );
 
   if (stagger) {
     const items = Children.toArray(children);
@@ -62,15 +65,7 @@ export function ScrollReveal({
       <div ref={ref} className={className}>
         {items.map((child, i) =>
           isValidElement(child) ? (
-            <div
-              key={i}
-              className="scroll-reveal-item"
-              style={{
-                opacity: isVisible ? 1 : 0,
-                transform: isVisible ? "translateY(0)" : "translateY(32px)",
-                transition: `opacity 0.9s cubic-bezier(0.16,1,0.3,1) ${delay + i * staggerMs}ms, transform 0.9s cubic-bezier(0.16,1,0.3,1) ${delay + i * staggerMs}ms`,
-              }}
-            >
+            <div key={i} className="scroll-reveal-item">
               {child}
             </div>
           ) : (
@@ -82,7 +77,7 @@ export function ScrollReveal({
   }
 
   return (
-    <div ref={ref} className={`scroll-reveal ${isVisible ? "reveal-visible" : ""} ${className}`}>
+    <div ref={ref} className={`scroll-reveal ${className}`}>
       {children}
     </div>
   );
