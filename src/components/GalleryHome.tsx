@@ -456,7 +456,10 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
                     <div className="transition-transform duration-300 group-hover:-translate-y-full">
                       <span>{item.title.replace('\n', ' ')}</span>
                     </div>
-                    <div className="absolute top-0 left-0 transition-transform duration-300 translate-y-full group-hover:translate-y-0 text-[#18C98A]">
+                    <div
+                      className="absolute top-0 left-0 transition-transform duration-300 translate-y-full group-hover:translate-y-0"
+                      style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
+                    >
                       <span>{item.title.replace('\n', ' ')}</span>
                     </div>
                   </div>

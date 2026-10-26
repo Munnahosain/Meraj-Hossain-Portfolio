@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { motion, Variants } from 'framer-motion';
+import { motion, Variants, MotionValue } from 'framer-motion';
 import { TimeTheme } from '../types';
 
 interface EditorialDeckCardsProps {
@@ -20,6 +20,7 @@ interface EditorialDeckCardsProps {
   theme: TimeTheme;
   windowWidth: number;
   windowHeight: number;
+  deckRepelX?: MotionValue<number>;
 }
 
 /**
@@ -68,30 +69,59 @@ const deckContainerVariants: Variants = {
   open: {
     pointerEvents: 'auto',
     transition: {
-      delayChildren: 0.1,
-      staggerChildren: 0.14,
-      staggerDirection: -1,
+      delayChildren: 0.08,
+      staggerChildren: 0.12,
+      staggerDirection: 1,
     },
   },
 };
 
-// Child card entrance variants: fade and slide sequentially from the bottom
-const cardChildVariants: Variants = {
+// Child card entrance variants with 3D perspective fan-out
+const card2Variants: Variants = {
   closed: {
-    x: 120,
-    y: 16,
-    scale: 0.96,
+    x: 90,
+    y: 28,
+    opacity: 0,
+    rotateY: -8,
+    scale: 0.95,
     transition: {
-      duration: 0.72,
+      duration: 0.65,
       ease: MENU_REVEAL_EASE,
     },
   },
   open: {
     x: 0,
     y: 0,
+    opacity: 1,
+    rotateY: 0,
     scale: 1,
     transition: {
       duration: 0.72,
+      ease: MENU_REVEAL_EASE,
+    },
+  },
+};
+
+const card3Variants: Variants = {
+  closed: {
+    x: 140,
+    y: 36,
+    opacity: 0,
+    rotateY: -12,
+    scale: 0.93,
+    transition: {
+      duration: 0.65,
+      ease: MENU_REVEAL_EASE,
+    },
+  },
+  open: {
+    x: 0,
+    y: 0,
+    opacity: 1,
+    rotateY: -1.5,
+    scale: 1,
+    transition: {
+      duration: 0.75,
       ease: MENU_REVEAL_EASE,
     },
   },
@@ -108,13 +138,15 @@ export const EditorialDeckCards: React.FC<EditorialDeckCardsProps> = ({
   card3Left,
   isDesktop,
   theme,
+  deckRepelX,
 }) => {
   const cardStyle: React.CSSProperties = {
-    backgroundColor: theme.bg, // Strictly identical to Card 1 / landing page color
+    backgroundColor: theme.bg,
     color: theme.text,
     border: `1px solid ${theme.border}`,
-    borderRadius: '0px', // Strictly sharp 0px corners
-    boxShadow: 'none', // Strictly no shadow as requested
+    borderRadius: '0px',
+    boxShadow: 'none',
+    transformStyle: 'preserve-3d',
   };
 
   return (
@@ -125,25 +157,25 @@ export const EditorialDeckCards: React.FC<EditorialDeckCardsProps> = ({
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
-      className="fixed inset-0 pointer-events-none z-24"
+      className="fixed inset-0 pointer-events-none z-24 [perspective:1400px]"
     >
       {/* ========================================================
           CARD 2: ARCHIVE
-          Exact match to image_7335291e.png:
           - Top-left: MERAJ / HOSSAIN (small stacked sans-serif)
           - Top-right: "mh." cursive signature
           - Title: "archive" (lowercase editorial grotesque)
-          - Bottom: 3 columns of photography (Mirror cube, Editorial brochure, Copenhagen text)
-          - Entrance: Sequential slide-in from bottom with circInOut
+          - Bottom: 3 columns of photography
+          - Entrance: Sequential slide-in from bottom with 3D perspective fan-out
           ======================================================== */}
       <motion.div
-        variants={cardChildVariants}
+        variants={card2Variants}
         onClick={() => isOpen && onNavigate('archive')}
         className={`group cursor-pointer select-none flex flex-col justify-between p-6 sm:p-7 overflow-hidden ${
           isDesktop ? 'fixed' : 'relative shrink-0'
         }`}
         style={{
           ...cardStyle,
+          x: deckRepelX,
           width: isDesktop ? `${cardWidth}px` : 'min(360px, 86vw)',
           height: isDesktop ? `${cardHeight}px` : '540px',
           top: isDesktop ? `${cardTop}px` : undefined,
@@ -159,7 +191,7 @@ export const EditorialDeckCards: React.FC<EditorialDeckCardsProps> = ({
             <div>MERAJ</div>
             <div>HOSSAIN</div>
           </div>
-          <SignatureIcon color={theme.text} />
+          <SignatureIcon color={theme.isLight ? '#18C98A' : theme.text} />
         </div>
 
         {/* Lowercase Title "archive" */}
@@ -213,21 +245,21 @@ export const EditorialDeckCards: React.FC<EditorialDeckCardsProps> = ({
 
       {/* ========================================================
           CARD 3: ABOUT
-          Exact match to image_7335291e.png:
           - Top-left: MERAJ / HOSSAIN (small stacked sans-serif)
           - Top-right: "mh." cursive signature
           - Title: "about" (lowercase editorial grotesque)
           - Bottom: Seated portrait of Meraj in wooden chair with green plant
-          - Entrance: Sequential slide-in from bottom with circInOut right after Card 2
+          - Entrance: Sequential slide-in from bottom with perspective fan-out
           ======================================================== */}
       <motion.div
-        variants={cardChildVariants}
+        variants={card3Variants}
         onClick={() => isOpen && onNavigate('about')}
         className={`group cursor-pointer select-none flex flex-col justify-between p-6 sm:p-7 overflow-hidden ${
           isDesktop ? 'fixed' : 'relative shrink-0'
         }`}
         style={{
           ...cardStyle,
+          x: deckRepelX,
           width: isDesktop ? `${cardWidth}px` : 'min(360px, 86vw)',
           height: isDesktop ? `${cardHeight}px` : '540px',
           top: isDesktop ? `${cardTop}px` : undefined,
@@ -243,7 +275,7 @@ export const EditorialDeckCards: React.FC<EditorialDeckCardsProps> = ({
             <div>MERAJ</div>
             <div>HOSSAIN</div>
           </div>
-          <SignatureIcon color={theme.text} />
+          <SignatureIcon color={theme.isLight ? '#18C98A' : theme.text} />
         </div>
 
         {/* Lowercase Title "about" */}
@@ -253,7 +285,7 @@ export const EditorialDeckCards: React.FC<EditorialDeckCardsProps> = ({
           </h2>
         </div>
 
-        {/* Clean Seated Portrait Photography Frame (Seated on chair with plant) */}
+        {/* Clean Seated Portrait Photography Frame */}
         <div className="w-full pt-4">
           <div
             className="h-[220px] sm:h-[340px] w-full overflow-hidden rounded-none bg-[#16181e]"

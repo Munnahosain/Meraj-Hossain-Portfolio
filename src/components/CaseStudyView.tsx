@@ -1,6 +1,7 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { CaseStudy, TimeTheme } from '../types';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
+import { useLenis } from '../hooks/useLenis';
 
 interface CaseStudyViewProps {
   caseStudy: CaseStudy;
@@ -18,16 +19,95 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
   theme,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const heroMediaRef = useRef<HTMLDivElement>(null);
+  const row1Ref = useRef<HTMLDivElement>(null);
+  const row2Ref = useRef<HTMLDivElement>(null);
+
+  const [heroScale, setHeroScale] = useState(1);
   const currentIndex = allCases.findIndex((c) => c.id === caseStudy.id);
   const nextCase = allCases[(currentIndex + 1) % allCases.length];
 
-  // Scroll to top on case change
+  // Attach Lenis smooth scrolling to the container
+  useLenis(true, containerRef);
+
+  // Scroll to top on case study change
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+    setHeroScale(1);
+  }, [caseStudy.id]);
+
+  // Scroll-linked hero scale animation
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      const scrollY = el.scrollTop;
+      // Gently scale down hero image from 1.0 to 0.96 as user scrolls first 600px
+      const scale = Math.max(0.955, 1 - (scrollY / 1400) * 0.05);
+      setHeroScale(scale);
+    };
+
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Generic horizontal drag-to-scroll handler for filmstrips
+  const setupDragScroll = (trackRef: React.RefObject<HTMLDivElement | null>) => {
+    let isDown = false;
+    let startX = 0;
+    let scrollLeft = 0;
+
+    const el = trackRef.current;
+    if (!el) return;
+
+    const onMouseDown = (e: MouseEvent) => {
+      isDown = true;
+      el.classList.add('cursor-grabbing');
+      startX = e.pageX - el.offsetLeft;
+      scrollLeft = el.scrollLeft;
+    };
+
+    const onMouseLeave = () => {
+      isDown = false;
+      el.classList.remove('cursor-grabbing');
+    };
+
+    const onMouseUp = () => {
+      isDown = false;
+      el.classList.remove('cursor-grabbing');
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - el.offsetLeft;
+      const walk = (x - startX) * 1.6;
+      el.scrollLeft = scrollLeft - walk;
+    };
+
+    el.addEventListener('mousedown', onMouseDown);
+    el.addEventListener('mouseleave', onMouseLeave);
+    el.addEventListener('mouseup', onMouseUp);
+    el.addEventListener('mousemove', onMouseMove);
+
+    return () => {
+      el.removeEventListener('mousedown', onMouseDown);
+      el.removeEventListener('mouseleave', onMouseLeave);
+      el.removeEventListener('mouseup', onMouseUp);
+      el.removeEventListener('mousemove', onMouseMove);
+    };
+  };
+
+  useEffect(() => {
+    const clean1 = setupDragScroll(row1Ref);
+    const clean2 = setupDragScroll(row2Ref);
+    return () => {
+      clean1?.();
+      clean2?.();
+    };
   }, [caseStudy.id]);
 
   return (
@@ -44,16 +124,16 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
         <div className="mb-10">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 font-mono text-[11px] tracking-widest uppercase hover:text-[#18C98A] text-[#8e9693] transition-colors cursor-pointer"
+            className="flex items-center gap-2 font-mono text-[11px] tracking-widest uppercase hover:text-[#18C98A] text-[#8e9693] transition-colors cursor-pointer group"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
             <span>Back to All Cases</span>
           </button>
         </div>
 
-        {/* Hero Headline & Intro Split */}
+        {/* Hero Headline & Intro Split with Pinned Sidebar */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-start pb-12 border-b border-[#18C98A]/15">
-          {/* Big Title */}
+          {/* Big Editorial Title & Overview */}
           <div className="lg:col-span-7">
             <h1
               className="text-5xl sm:text-7xl xl:text-8xl font-sans font-light tracking-tight leading-[0.95] text-balance transition-colors duration-500"
@@ -69,8 +149,8 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
             </p>
           </div>
 
-          {/* Metadata Block */}
-          <div className="lg:col-span-5 flex flex-col justify-between h-full pt-2 space-y-8">
+          {/* Metadata Block - Pinned on Desktop */}
+          <div className="lg:col-span-5 lg:sticky lg:top-36 flex flex-col justify-between pt-2 space-y-8">
             <div className="grid grid-cols-2 gap-6 font-mono text-[11px] tracking-widest uppercase">
               <div>
                 <span className="opacity-60 block mb-1" style={{ color: theme.textMuted }}>Client</span>
@@ -106,8 +186,15 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
           </div>
         </div>
 
-        {/* Primary Hero Media */}
-        <div className="my-14 w-full rounded-none overflow-hidden border border-[#18C98A]/20 bg-[#16181e] shadow-none">
+        {/* Primary Hero Media with Scroll-Linked Scale */}
+        <div
+          ref={heroMediaRef}
+          style={{
+            transform: `scale(${heroScale})`,
+            transition: 'transform 0.1s ease-out',
+          }}
+          className="my-14 w-full rounded-none overflow-hidden border border-[#18C98A]/20 bg-[#16181e] shadow-none will-change-transform"
+        >
           {caseStudy.coverVideo ? (
             <video
               src={caseStudy.coverVideo}
@@ -131,7 +218,7 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
         <div className="space-y-16 sm:space-y-24 my-16">
           {caseStudy.contentMedia.map((media, idx) => (
             <div key={idx} className="space-y-4">
-              <div className="relative w-full rounded-none overflow-hidden border border-[#18C98A]/15 bg-[#16181e] shadow-none">
+              <div className="relative w-full rounded-none overflow-hidden border border-[#18C98A]/15 bg-[#16181e] shadow-none transition-all duration-500 hover:border-[#18C98A]/35">
                 {media.type === 'video' ? (
                   <video
                     src={media.src}
@@ -161,15 +248,23 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
           ))}
         </div>
 
-        {/* Dual-Row Horizontal Filmstrip */}
+        {/* Dual-Row Horizontal Filmstrip with Momentum Drag */}
         {caseStudy.scrollGalleryRow1 && caseStudy.scrollGalleryRow1.length > 0 && (
           <div className="my-20 space-y-6">
-            <div className="font-mono text-[11px] tracking-widest uppercase text-[#18C98A]">
-              04. Multi-Touch Brand & Digital Interface Screens
+            <div className="flex items-center justify-between">
+              <div className="font-mono text-[11px] tracking-widest uppercase text-[#18C98A]">
+                Multi-Touch Brand & Digital Interface Screens
+              </div>
+              <span className="text-[10px] font-mono tracking-wider uppercase text-[#8e9693] hidden sm:inline">
+                Drag to explore
+              </span>
             </div>
 
             {/* Row 1 Track */}
-            <div className="w-full overflow-x-auto no-scrollbar flex gap-4 py-2 select-none">
+            <div
+              ref={row1Ref}
+              className="w-full overflow-x-auto no-scrollbar flex gap-4 py-2 select-none cursor-grab"
+            >
               {caseStudy.scrollGalleryRow1.map((src, i) => (
                 <div
                   key={i}
@@ -187,7 +282,10 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
 
             {/* Row 2 Track */}
             {caseStudy.scrollGalleryRow2 && (
-              <div className="w-full overflow-x-auto no-scrollbar flex gap-4 py-2 select-none">
+              <div
+                ref={row2Ref}
+                className="w-full overflow-x-auto no-scrollbar flex gap-4 py-2 select-none cursor-grab"
+              >
                 {caseStudy.scrollGalleryRow2.map((src, i) => (
                   <div
                     key={i}

@@ -8,18 +8,32 @@ import Lenis from 'lenis';
 
 /**
  * Hook to initialize Lenis smooth scroll for editorial motion
- * Matches the requested modern stack (Next.js/React + GSAP + Framer Motion + Lenis)
+ * Supports scrolling custom containers or window
  */
-export function useLenis(enabled = true) {
+export function useLenis(
+  enabled = true,
+  wrapperRef?: React.RefObject<HTMLElement | null>
+) {
   const lenisRef = useRef<Lenis | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
 
+    // Check prefers-reduced-motion
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (prefersReducedMotion) return;
+
+    const wrapper = wrapperRef?.current || undefined;
+
     const lenis = new Lenis({
-      duration: 1.2,
+      wrapper: wrapper,
+      content: wrapper ? (wrapper.firstElementChild as HTMLElement) || wrapper : undefined,
+      duration: 1.15,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // exponential ease-out
-      touchMultiplier: 1.5,
+      touchMultiplier: 1.4,
       infinite: false,
     });
 
@@ -38,7 +52,7 @@ export function useLenis(enabled = true) {
       lenis.destroy();
       lenisRef.current = null;
     };
-  }, [enabled]);
+  }, [enabled, wrapperRef]);
 
   return lenisRef;
 }

@@ -27,6 +27,7 @@ interface HeaderProps {
   menuProgress: MotionValue<number>;
   theme: TimeTheme;
   onScrubStateChange?: (isScrubbing: boolean) => void;
+  deckRepelX?: MotionValue<number>;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -48,6 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
   menuProgress,
   theme,
   onScrubStateChange,
+  deckRepelX,
 }) => {
   const [signatureHovered, setSignatureHovered] = useState(false);
   const [isDraggingClock, setIsDraggingClock] = useState(false);
@@ -204,16 +206,22 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
-  const headerTextColor = isMenuOpen ? '#A7F3D0' : theme.text;
-  const brandLeft = useTransform(menuProgress, (progress) => progress * (menuFrameLeft + 8));
-  const brandTop = useTransform(menuProgress, (progress) => progress * (menuFrameTop + 8));
+  // Name and signature strictly preserve hero section colors when docked as a card
+  const nameTextColor = theme.text;
+  const signatureStroke = theme.isLight
+    ? '#18C98A'
+    : (theme.bg === '#101114' ? '#18C98A' : theme.text);
+  const navTextColor = isMenuOpen ? '#FFFFFF' : theme.text;
+
+  const brandLeft = useTransform(menuProgress, (progress) => progress * menuFrameLeft);
+  const brandTop = useTransform(menuProgress, (progress) => progress * menuFrameTop);
   const signatureHomeLeft = (viewportWidth - 32) * 0.288;
-  const signatureMenuLeft = menuFrameLeft + menuFrameWidth - menuSignatureWidth - 40;
+  const signatureMenuLeft = menuFrameLeft + menuFrameWidth - menuSignatureWidth - 32;
   const signatureLeft = useTransform(
     menuProgress,
     (progress) => signatureHomeLeft + (signatureMenuLeft - signatureHomeLeft) * progress,
   );
-  const signatureTop = useTransform(menuProgress, (progress) => progress * (menuFrameTop + 8));
+  const signatureTop = useTransform(menuProgress, (progress) => progress * menuFrameTop);
 
   return (
     <header
@@ -221,14 +229,14 @@ export const Header: React.FC<HeaderProps> = ({
         isDraggingClock ? 'transition-none' : 'transition-colors duration-700'
       } pointer-events-auto`}
       style={{
-        color: headerTextColor,
+        color: navTextColor,
       }}
     >
       <div className="relative h-[52px] w-full flex items-start justify-between">
-        {/* Left: 2-line Clean MERAJ / HOSSAIN with Bottom-to-Top Text Reveal */}
+        {/* Left: 2-line Clean MERAJ / HOSSAIN with Bottom-to-Top Text Reveal & Rolling Hover Animation */}
         <motion.div
-          className="absolute left-0 top-0 cursor-pointer font-sans text-[12px] font-normal tracking-[0.14em] uppercase leading-[1.1] hover:text-[#18C98A]"
-          style={{ color: theme.text, left: brandLeft, top: brandTop }}
+          className="group absolute left-0 top-0 cursor-pointer font-sans text-[12px] font-normal tracking-[0.14em] uppercase leading-[1.2]"
+          style={{ color: nameTextColor, left: brandLeft, top: brandTop, x: deckRepelX }}
           onClick={() => onNavigate('home')}
         >
           <div className="overflow-hidden">
@@ -238,7 +246,17 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
               style={{ transitionDelay: '120ms' }}
             >
-              MERAJ
+              <div className="relative overflow-hidden h-[15px]">
+                <div className="transition-transform duration-300 ease-out group-hover:-translate-y-full">
+                  <span>MERAJ</span>
+                </div>
+                <div
+                  className="absolute top-0 left-0 transition-transform duration-300 ease-out translate-y-full group-hover:translate-y-0"
+                  style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
+                >
+                  <span>MERAJ</span>
+                </div>
+              </div>
             </div>
           </div>
           <div className="overflow-hidden">
@@ -248,14 +266,24 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
               style={{ transitionDelay: '220ms' }}
             >
-              HOSSAIN
+              <div className="relative overflow-hidden h-[15px]">
+                <div className="transition-transform duration-300 ease-out group-hover:-translate-y-full">
+                  <span>HOSSAIN</span>
+                </div>
+                <div
+                  className="absolute top-0 left-0 transition-transform duration-300 ease-out translate-y-full group-hover:translate-y-0"
+                  style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
+                >
+                  <span>HOSSAIN</span>
+                </div>
+              </div>
             </div>
           </div>
         </motion.div>
         {/* Center: Live Handwritten Pen Signing Animation for "Mh." Script Mark */}
         <motion.div
           className="absolute top-0 cursor-pointer flex flex-col items-center group"
-          style={{ left: signatureLeft, top: signatureTop }}
+          style={{ left: signatureLeft, top: signatureTop, x: deckRepelX }}
           onMouseEnter={() => setSignatureHovered(true)}
           onMouseLeave={() => setSignatureHovered(false)}
           onClick={handleSignatureClick}
@@ -276,7 +304,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* 1. First Pen Stroke: Cursive "M" (flowing from left to right) */}
             <path
               d="M4 36 C 8 20, 16 8, 22 12 C 28 16, 30 38, 34 38 C 38 38, 44 14, 50 14 C 56 14, 62 36, 68 38"
-              stroke="#18C98A"
+              stroke={signatureStroke}
               strokeWidth="2.3"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -291,7 +319,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* 2. Second Pen Stroke: Cursive "h" looping right after "M" */}
             <path
               d="M72 10 C 74 6, 77 8, 77 24 C 77 34, 84 22, 90 28 C 94 32, 95 38, 98 37"
-              stroke="#18C98A"
+              stroke={signatureStroke}
               strokeWidth="2.3"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -308,7 +336,7 @@ export const Header: React.FC<HeaderProps> = ({
               cx="99"
               cy="37"
               r="1.6"
-              fill="#18C98A"
+              fill={signatureStroke}
               style={{
                 transformOrigin: '99px 37px',
               }}
@@ -325,10 +353,10 @@ export const Header: React.FC<HeaderProps> = ({
             isMenuOpen ? 'pointer-events-none opacity-0' : 'opacity-100'
           }`}
         >
-          {/* Stacked MENU / CONTACT with Bottom-to-Top Text Reveal */}
+          {/* Stacked MENU / CONTACT with Bottom-to-Top Text Reveal & Rolling Hover Animation */}
           <nav
             className="absolute left-[56.6%] top-[-9px] flex flex-col font-sans text-[12px] font-normal tracking-[0.14em] uppercase leading-[1.3] transition-colors duration-500"
-            style={{ color: headerTextColor }}
+            style={{ color: navTextColor }}
           >
             <div className="overflow-hidden">
               <div
@@ -339,9 +367,19 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <button
                   onClick={onToggleMenu || onOpenMenu}
-                  className="hover:text-[#18C98A] transition-colors cursor-pointer text-left block"
+                  className="group/menu relative block cursor-pointer text-left select-none"
                 >
-                  {isMenuOpen ? 'CLOSE ✕' : 'MENU'}
+                  <div className="relative overflow-hidden h-[16px]">
+                    <div className="transition-transform duration-300 ease-out group-hover/menu:-translate-y-full">
+                      <span>{isMenuOpen ? 'CLOSE ✕' : 'MENU'}</span>
+                    </div>
+                    <div
+                      className="absolute top-0 left-0 transition-transform duration-300 ease-out translate-y-full group-hover/menu:translate-y-0"
+                      style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
+                    >
+                      <span>{isMenuOpen ? 'CLOSE ✕' : 'MENU'}</span>
+                    </div>
+                  </div>
                 </button>
               </div>
             </div>
@@ -355,21 +393,31 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <button
                     onClick={onOpenContact}
-                    className="hover:text-[#18C98A] transition-colors cursor-pointer text-left block"
+                    className="group/contact relative block cursor-pointer text-left select-none mt-[1px]"
                   >
-                    CONTACT
+                    <div className="relative overflow-hidden h-[16px]">
+                      <div className="transition-transform duration-300 ease-out group-hover/contact:-translate-y-full">
+                        <span>CONTACT</span>
+                      </div>
+                      <div
+                        className="absolute top-0 left-0 transition-transform duration-300 ease-out translate-y-full group-hover/contact:translate-y-0"
+                        style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
+                      >
+                        <span>CONTACT</span>
+                      </div>
+                    </div>
                   </button>
                 </div>
               </div>
             )}
           </nav>
 
-          {/* Minimalist Clock Widget: Exact match to Reference Images (image_86fef280.png & image_228dcdae.png) */}
+          {/* Minimalist Clock Widget: Exact match to Reference Images */}
           <div className="absolute right-0 top-12 flex items-start gap-[5px] lg:top-px">
             {/* Left of Dial: TIME TRAVEL ✕ and HH  .mm */}
             <div
               className="relative -top-3 flex flex-col items-end text-right font-sans text-[12px] font-normal tracking-[0.14em] uppercase leading-[1.3] transition-colors duration-500"
-              style={{ color: headerTextColor }}
+              style={{ color: navTextColor }}
             >
               <div className="overflow-hidden">
                 <div
@@ -381,7 +429,8 @@ export const Header: React.FC<HeaderProps> = ({
                   {isTimeOffset ? (
                     <button
                       onClick={onResetTime}
-                      className="text-[#18C98A] hover:opacity-80 transition-opacity cursor-pointer text-[10px] sm:text-[11px] font-medium tracking-[0.14em] flex items-center gap-1.5"
+                      className="hover:opacity-75 transition-opacity cursor-pointer text-[10px] sm:text-[11px] font-medium tracking-[0.14em] flex items-center gap-1.5"
+                      style={{ color: navTextColor }}
                       title="Click ✕ to reset to Live Dhaka Time"
                     >
                       <span>TIME TRAVEL</span>
@@ -402,7 +451,8 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <button
                     onClick={handleQuickCycle}
-                    className="tabular-nums font-mono text-[11px] sm:text-[12px] hover:text-[#18C98A] transition-colors cursor-pointer block text-right"
+                    className="tabular-nums font-mono text-[11px] sm:text-[12px] hover:opacity-75 transition-opacity cursor-pointer block text-right"
+                    style={{ color: navTextColor }}
                     title="Click to cycle themes (Day → Evening Green → Night → Live)"
                   >
                     {displayTime}
@@ -411,7 +461,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            {/* Circular Wireframe Dial: Concentric outer circle with inner orbiting circle indicator */}
+            {/* Minimalist 2-Circle Dial: Exactly 2 circles, no ticks, no center dot, subtle hover scale */}
             <div
               className={`transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                 isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
@@ -421,40 +471,14 @@ export const Header: React.FC<HeaderProps> = ({
               <div
                 ref={dialRef}
                 onPointerDown={handlePointerDown}
-                className="relative h-[52px] w-[52px] rounded-full border border-solid cursor-grab active:cursor-grabbing flex items-center justify-center select-none touch-none transition-colors duration-500"
+                className="group relative h-[48px] w-[48px] sm:h-[52px] sm:w-[52px] rounded-full border border-solid cursor-grab active:cursor-grabbing flex items-center justify-center select-none touch-none transition-transform duration-300 ease-out hover:scale-110 active:scale-105"
                 style={{
-                  borderColor: theme.isLight
-                    ? 'rgba(18, 20, 23, 0.38)'
-                    : theme.isGreen
-                    ? 'rgba(167, 243, 208, 0.45)'
-                    : 'rgba(255, 255, 255, 0.45)',
-                  backgroundColor: theme.isLight
-                    ? 'rgba(0, 0, 0, 0.03)'
-                    : theme.isGreen
-                    ? 'rgba(167, 243, 208, 0.06)'
-                    : 'rgba(255, 255, 255, 0.04)',
+                  borderColor: navTextColor,
+                  backgroundColor: 'transparent',
                 }}
-                title="Drag to travel time: Top (12:00 Day) → Right (3:00) → Bottom (6:00 Evening/Sunrise) → Left (9:00)"
+                title="Drag to travel time: Top (12:00) → Right (3:00) → Bottom (6:00) → Left (9:00)"
               >
-                {/* 4 Quadrant Subtle Tick Marks */}
-                <span className="absolute top-[3px] left-1/2 -translate-x-1/2 w-[1px] h-[3px] bg-current opacity-40" />
-                <span className="absolute bottom-[3px] left-1/2 -translate-x-1/2 w-[1px] h-[3px] bg-current opacity-40" />
-                <span className="absolute left-[3px] top-1/2 -translate-y-1/2 w-[3px] h-[1px] bg-current opacity-40" />
-                <span className="absolute right-[3px] top-1/2 -translate-y-1/2 w-[3px] h-[1px] bg-current opacity-40" />
-
-                {/* Center Pivot Dot */}
-                <div
-                  className="w-[2.5px] h-[2.5px] rounded-full transition-colors duration-300"
-                  style={{
-                    backgroundColor: theme.isLight
-                      ? 'rgba(18, 20, 23, 0.55)'
-                      : theme.isGreen
-                      ? '#A7F3D0'
-                      : 'rgba(255, 255, 255, 0.65)',
-                  }}
-                />
-
-                {/* Rotating Indicator: When straight up (0°) it's 12:00; when at bottom (180°) it's 6:00 */}
+                {/* Rotating Indicator: Exactly one inner circle orbiting inside the outer circle */}
                 <div
                   className={`absolute inset-0 flex items-start justify-center ${
                     isDraggingClock ? 'transition-none' : 'transition-transform duration-150 ease-out'
@@ -463,20 +487,11 @@ export const Header: React.FC<HeaderProps> = ({
                     transform: `rotate(${angleDeg}deg)`,
                   }}
                 >
-                  {/* Inner Indicator Circle orbiting on perimeter */}
+                  {/* Inner Circle: Clean hollow circular ring */}
                   <div
-                    className={`w-[7.5px] h-[7.5px] sm:w-[8px] sm:h-[8px] rounded-full mt-[2px] transition-colors duration-300 ${
-                      theme.isLight
-                        ? 'bg-[#121417]'
-                        : 'border-[1.5px] border-solid bg-transparent'
-                    }`}
+                    className="w-[8px] h-[8px] sm:w-[9px] sm:h-[9px] rounded-full mt-[4px] border-[1.5px] border-solid bg-transparent transition-colors duration-300"
                     style={{
-                      borderColor: theme.isGreen
-                        ? '#A7F3D0'
-                        : '#FFFFFF',
-                      boxShadow: theme.isGreen
-                        ? '0 0 6px rgba(167, 243, 208, 0.6)'
-                        : 'none',
+                      borderColor: navTextColor,
                     }}
                   />
                 </div>

@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ARCHIVE_ITEMS } from '../data/portfolioData';
 import { ArchiveItem, TimeTheme } from '../types';
 import { Grid, Columns, X, Maximize2 } from 'lucide-react';
@@ -11,12 +11,31 @@ interface ArchiveViewProps {
 
 export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE_ITEMS }) => {
   const [activeItem, setActiveItem] = useState<ArchiveItem | null>(null);
+  const [hoveredItem, setHoveredItem] = useState<ArchiveItem | null>(null);
+  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const [viewMode, setViewMode] = useState<'horizontal' | 'grid'>('horizontal');
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Track mouse coordinates for floating preview card
+  const handleMouseMove = (e: React.MouseEvent) => {
+    setCursorPos({ x: e.clientX, y: e.clientY });
+  };
+
+  // Keyboard escape for lightbox
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && activeItem) {
+        setActiveItem(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [activeItem]);
+
   return (
     <div
-      className="w-full min-h-screen pt-28 sm:pt-36 pb-20 transition-colors duration-700 overflow-x-hidden"
+      onMouseMove={handleMouseMove}
+      className="relative w-full min-h-screen pt-28 sm:pt-36 pb-20 transition-colors duration-700 overflow-x-hidden"
       style={{
         backgroundColor: theme.bg,
         color: theme.text,
@@ -45,7 +64,7 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE
             <div className="flex items-center gap-1 p-1 rounded border border-[#18C98A]/20 bg-[#16181e] backdrop-blur-sm self-start sm:self-auto">
               <button
                 onClick={() => setViewMode('horizontal')}
-                className={`p-1.5 rounded transition-colors ${
+                className={`p-1.5 rounded transition-colors cursor-pointer ${
                   viewMode === 'horizontal'
                     ? 'bg-[#18C98A] text-[#101114]'
                     : 'text-[#8e9693] hover:text-[#f2f4f3]'
@@ -56,7 +75,7 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE
               </button>
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded transition-colors ${
+                className={`p-1.5 rounded transition-colors cursor-pointer ${
                   viewMode === 'grid'
                     ? 'bg-[#18C98A] text-[#101114]'
                     : 'text-[#8e9693] hover:text-[#f2f4f3]'
@@ -79,6 +98,8 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE
               <motion.div
                 key={item.id}
                 onClick={() => setActiveItem(item)}
+                onMouseEnter={() => setHoveredItem(item)}
+                onMouseLeave={() => setHoveredItem(null)}
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.2 }}
@@ -128,6 +149,8 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE
               <motion.div
                 key={item.id}
                 onClick={() => setActiveItem(item)}
+                onMouseEnter={() => setHoveredItem(item)}
+                onMouseLeave={() => setHoveredItem(null)}
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.2 }}
@@ -155,7 +178,7 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE
                   )}
 
                   <div className="absolute inset-0 bg-[#101114]/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <span className="p-2.5 rounded-full bg-[#101114]/80 border border-[#18C98A]/40 text-[#18C98A] backdrop-blur-md">
+                    <span className="p-3 rounded-full bg-[#101114]/80 border border-[#18C98A]/40 text-[#18C98A] backdrop-blur-md">
                       <Maximize2 className="w-4 h-4" />
                     </span>
                   </div>
@@ -174,54 +197,109 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE
         )}
       </div>
 
-      {/* Lightbox Modal */}
-      {activeItem && (
-        <div
-          className="fixed inset-0 z-50 bg-[#101114]/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-10 animate-in fade-in duration-200"
-          onClick={() => setActiveItem(null)}
-        >
-          <div
-            className="relative max-w-4xl w-full max-h-[90vh] flex flex-col rounded-none overflow-hidden bg-[#16181e] border border-[#18C98A]/30 shadow-none"
-            onClick={(e) => e.stopPropagation()}
+      {/* Floating Cursor Media Preview on Desktop */}
+      <AnimatePresence>
+        {hoveredItem && !activeItem && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              x: cursorPos.x + 18,
+              y: cursorPos.y - 120,
+            }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+            className="fixed top-0 left-0 pointer-events-none z-50 hidden xl:block w-48 overflow-hidden rounded border border-[#18C98A]/40 bg-[#101114]/90 backdrop-blur-md p-2 shadow-2xl"
           >
-            <div className="p-4 border-b border-[#18C98A]/15 flex items-center justify-between font-mono text-[11px] tracking-widest uppercase text-[#f2f4f3]">
-              <span>
-                <span className="text-[#18C98A] mr-2">{activeItem.number}</span> / {activeItem.title}
-              </span>
-              <button
-                onClick={() => setActiveItem(null)}
-                className="hover:text-[#18C98A] transition-colors p-1 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="relative flex-1 bg-[#101114] overflow-hidden flex items-center justify-center min-h-[400px]">
-              {activeItem.type === 'video' ? (
+            <div className="w-full h-28 overflow-hidden rounded-sm bg-black/50 mb-2">
+              {hoveredItem.type === 'video' ? (
                 <video
-                  src={activeItem.src}
-                  controls
+                  src={hoveredItem.src}
+                  poster={hoveredItem.poster}
                   autoPlay
                   loop
+                  muted
                   playsInline
-                  className="max-h-[75vh] w-auto max-w-full object-contain"
+                  className="w-full h-full object-cover"
                 />
               ) : (
                 <img
-                  src={activeItem.src}
-                  alt={activeItem.title}
-                  className="max-h-[75vh] w-auto max-w-full object-contain"
+                  src={hoveredItem.src}
+                  alt={hoveredItem.title}
+                  className="w-full h-full object-cover"
                 />
               )}
             </div>
-
-            <div className="p-4 border-t border-[#18C98A]/15 flex items-center justify-between font-mono text-[10px] tracking-widest uppercase text-[#8e9693]">
-              <span className="text-[#18C98A]">{activeItem.category}</span>
-              <span>{activeItem.year}</span>
+            <div className="text-[10px] font-mono tracking-widest uppercase text-white truncate">
+              {hoveredItem.title}
             </div>
-          </div>
-        </div>
-      )}
+            <div className="text-[9px] font-mono text-[#18C98A] uppercase">
+              {hoveredItem.category}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Fullscreen Lightbox Modal */}
+      <AnimatePresence>
+        {activeItem && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8 bg-[#101114]/95 backdrop-blur-xl"
+            onClick={() => setActiveItem(null)}
+          >
+            <button
+              onClick={() => setActiveItem(null)}
+              className="absolute top-6 right-6 p-2 rounded-full border border-white/20 text-white/80 hover:text-white hover:border-[#18C98A] transition-colors cursor-pointer z-10"
+              title="Close (Esc)"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <motion.div
+              initial={{ scale: 0.95, y: 16 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 16 }}
+              transition={{ duration: 0.4, ease: [0.76, 0, 0.24, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-5xl w-full max-h-[85vh] flex flex-col overflow-hidden rounded border border-[#18C98A]/30 bg-[#16181e]"
+            >
+              <div className="w-full flex-1 overflow-hidden bg-black flex items-center justify-center">
+                {activeItem.type === 'video' ? (
+                  <video
+                    src={activeItem.src}
+                    poster={activeItem.poster}
+                    controls
+                    autoPlay
+                    loop
+                    playsInline
+                    className="max-h-[70vh] w-full object-contain"
+                  />
+                ) : (
+                  <img
+                    src={activeItem.src}
+                    alt={activeItem.title}
+                    className="max-h-[70vh] w-full object-contain"
+                  />
+                )}
+              </div>
+
+              <div className="p-5 flex items-center justify-between border-t border-white/10 bg-[#121419]">
+                <div>
+                  <h3 className="text-lg font-sans text-white">{activeItem.title}</h3>
+                  <div className="text-[11px] font-mono tracking-widest uppercase text-[#8e9693]">
+                    {activeItem.category} · {activeItem.year}
+                  </div>
+                </div>
+                <div className="font-mono text-sm text-[#18C98A]">{activeItem.number}</div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
