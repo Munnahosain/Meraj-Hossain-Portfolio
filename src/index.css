@@ -5,12 +5,48 @@
     --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --font-display: 'Syne', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+    --motion-duration-instant: 120ms;
+    --motion-duration-fast: 180ms;
+    --motion-duration-standard: 280ms;
+    --motion-duration-enter: 420ms;
+    --motion-duration-emphasis: 650ms;
+    --motion-duration-ambient: 1200ms;
+    --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --motion-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+    --motion-ease-exit: cubic-bezier(0.7, 0, 0.84, 0);
+    --motion-ease-menu: cubic-bezier(0.76, 0, 0.24, 1);
+    --motion-distance-small: 8px;
+    --motion-distance-medium: 16px;
+    --motion-distance-large: 24px;
+    --motion-stagger-tight: 40ms;
+    --motion-stagger-standard: 80ms;
+    --motion-stagger-relaxed: 120ms;
   }
 
   body {
     font-family: var(--font-sans);
-    transition: background-color 0.7s cubic-bezier(0.16, 1, 0.3, 1), color 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    transition:
+      background-color var(--motion-duration-emphasis) var(--motion-ease-enter),
+      color var(--motion-duration-emphasis) var(--motion-ease-enter);
   }
+}
+
+.motion-transition-colors {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-duration: var(--motion-duration-fast);
+  transition-timing-function: var(--motion-ease-standard);
+}
+
+.motion-transition-opacity {
+  transition-property: opacity;
+  transition-duration: var(--motion-duration-fast);
+  transition-timing-function: var(--motion-ease-standard);
+}
+
+.motion-transition-transform {
+  transition-property: transform;
+  transition-duration: var(--motion-duration-fast);
+  transition-timing-function: var(--motion-ease-standard);
 }
 
 html,
@@ -55,4 +91,17 @@ html.admin-scroll body {
 /* Text slide animation on hover */
 .slide-text-btn:hover .slide-text-inner {
   transform: translateY(-50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-delay: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-delay: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

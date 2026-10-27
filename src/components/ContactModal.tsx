@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { MerajProfile, TimeTheme } from '../types';
 import { X, Check, Copy } from 'lucide-react';
+import {
+  MotionButton,
+  MotionModalBackdrop,
+  MotionModalContent,
+  MotionTabPanel,
+} from './motion/MotionPrimitives';
 
 interface ContactModalProps {
   isOpen: boolean;
@@ -70,77 +76,65 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.28 }}
+    <MotionModalBackdrop
       onClick={onClose}
       className="fixed inset-0 z-50 bg-[#101114]/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 md:p-10"
     >
       {/* Paper Container Card in #101114 obsidian with #18C98A border */}
-      <motion.div
+      <MotionModalContent
         role="dialog"
         aria-modal="true"
         aria-label="Contact Meraj Hossain"
-        initial={{ opacity: 0, y: 28, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 16, scale: 0.98 }}
-        transition={{ duration: 0.42, ease: [0.76, 0, 0.24, 1] }}
         onClick={(event) => event.stopPropagation()}
         className="relative w-full max-w-4xl max-h-[92vh] overflow-y-auto no-scrollbar rounded-none shadow-none border border-[#18C98A]/30 bg-[#101114] text-[#f2f4f3] flex flex-col justify-between"
       >
         {/* Top Tab Bar & Close Button */}
         <div className="p-6 sm:p-8 flex items-center justify-between border-b border-[#18C98A]/15 shrink-0 bg-[#16181e]">
           <div className="flex items-center gap-6 sm:gap-8 font-mono text-[11px] tracking-widest uppercase font-semibold">
-            <button
+            <MotionButton
               onClick={() => setTab('client')}
-              className={`cursor-pointer transition-colors ${
+              className={`cursor-pointer motion-transition-colors ${
                 tab === 'client' ? 'text-[#18C98A] underline underline-offset-4' : 'text-[#8e9693] hover:text-[#f2f4f3]'
               }`}
             >
               Client Brief
-            </button>
-            <button
+            </MotionButton>
+            <MotionButton
               onClick={() => setTab('talent')}
-              className={`cursor-pointer transition-colors ${
+              className={`cursor-pointer motion-transition-colors ${
                 tab === 'talent' ? 'text-[#18C98A] underline underline-offset-4' : 'text-[#8e9693] hover:text-[#f2f4f3]'
               }`}
             >
               Collaboration
-            </button>
-            <button
+            </MotionButton>
+            <MotionButton
               onClick={() => setTab('email')}
-              className={`cursor-pointer transition-colors ${
+              className={`cursor-pointer motion-transition-colors ${
                 tab === 'email' ? 'text-[#18C98A] underline underline-offset-4' : 'text-[#8e9693] hover:text-[#f2f4f3]'
               }`}
             >
               Direct Contacts
-            </button>
+            </MotionButton>
           </div>
 
-          <button
+          <MotionButton
             onClick={onClose}
-            className="flex items-center gap-1 font-mono text-[11px] tracking-widest uppercase hover:text-[#18C98A] transition-colors cursor-pointer text-[#8e9693]"
+            className="flex items-center gap-1 font-mono text-[11px] tracking-widest uppercase hover:text-[#18C98A] motion-transition-colors cursor-pointer text-[#8e9693]"
           >
             <span>Close</span>
             <X className="w-4 h-4 text-[#18C98A]" />
-          </button>
+          </MotionButton>
         </div>
 
         {/* Content Area */}
         <AnimatePresence mode="wait" initial={false}>
-        <motion.div
+        <MotionTabPanel
           key={isSubmitted ? 'submitted' : tab}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.24, ease: [0.76, 0, 0.24, 1] }}
           className="p-6 sm:p-10 flex-1 bg-[#101114]"
         >
           {isSubmitted ? (
             /* Thank you paper confirmation */
-            <div className="py-20 text-center space-y-4 animate-in fade-in zoom-in-95 duration-500">
+            <div className="py-20 text-center space-y-4">
               <h3 className="text-5xl sm:text-7xl font-sans font-light tracking-tight text-[#18C98A]">
                 thank you
               </h3>
@@ -148,12 +142,12 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                 Your message has been received. Meraj Hossain will get back to you as soon as possible.
               </p>
               <div className="pt-8">
-                <button
+                <MotionButton
                   onClick={onClose}
-                  className="px-6 py-2.5 rounded border border-[#18C98A]/40 font-mono text-[11px] tracking-widest uppercase hover:bg-[#18C98A] hover:text-[#101114] transition-colors cursor-pointer text-[#18C98A]"
+                  className="px-6 py-2.5 rounded border border-[#18C98A]/40 font-mono text-[11px] tracking-widest uppercase hover:bg-[#18C98A] hover:text-[#101114] motion-transition-colors cursor-pointer text-[#18C98A]"
                 >
                   Close Window
-                </button>
+                </MotionButton>
               </div>
             </div>
           ) : tab === 'client' ? (
@@ -186,7 +180,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                           className="flex items-center gap-3 cursor-pointer select-none text-xs sm:text-sm text-[#f2f4f3] font-light hover:text-[#18C98A]"
                         >
                           <div
-                            className={`w-3.5 h-3.5 border rounded-sm flex items-center justify-center transition-colors ${
+                            className={`w-3.5 h-3.5 border rounded-sm flex items-center justify-center motion-transition-colors ${
                               checked
                                 ? 'bg-[#18C98A] border-[#18C98A] text-[#101114]'
                                 : 'border-[#18C98A]/40 bg-transparent'
@@ -208,18 +202,18 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                   </div>
                   <div className="md:col-span-8 flex flex-wrap gap-4">
                     {formatsList.map((fmt) => (
-                      <button
+                      <MotionButton
                         type="button"
                         key={fmt}
                         onClick={() => setSelectedFormat(fmt)}
-                        className={`px-4 py-1.5 rounded border text-xs sm:text-sm font-light transition-colors ${
+                        className={`px-4 py-1.5 rounded border text-xs sm:text-sm font-light motion-transition-colors ${
                           selectedFormat === fmt
                             ? 'bg-[#18C98A] text-[#101114] border-[#18C98A] font-medium'
                             : 'border-[#18C98A]/30 hover:border-[#18C98A] text-[#f2f4f3]'
                         }`}
                       >
                         {fmt}
-                      </button>
+                      </MotionButton>
                     ))}
                   </div>
                 </div>
@@ -231,18 +225,18 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                   </div>
                   <div className="md:col-span-8 flex flex-wrap gap-2.5">
                     {budgetsList.map((bg) => (
-                      <button
+                      <MotionButton
                         type="button"
                         key={bg}
                         onClick={() => setSelectedBudget(bg)}
-                        className={`px-3.5 py-1.5 rounded border text-xs font-mono transition-colors ${
+                        className={`px-3.5 py-1.5 rounded border text-xs font-mono motion-transition-colors ${
                           selectedBudget === bg
                             ? 'bg-[#18C98A] text-[#101114] border-[#18C98A] font-semibold'
                             : 'border-[#18C98A]/30 hover:border-[#18C98A] text-[#f2f4f3]'
                         }`}
                       >
                         {bg}
-                      </button>
+                      </MotionButton>
                     ))}
                   </div>
                 </div>
@@ -322,12 +316,12 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                   <span className="font-mono text-[10px] text-[#8e9693] uppercase tracking-widest">
                     * Required fields
                   </span>
-                  <button
+                  <MotionButton
                     type="submit"
-                    className="px-8 py-3 rounded bg-[#18C98A] text-[#101114] font-mono text-xs font-semibold tracking-widest uppercase hover:bg-[#18C98A]/90 transition-all shadow-[0_0_15px_rgba(24,201,138,0.4)] cursor-pointer"
+                    className="px-8 py-3 rounded bg-[#18C98A] text-[#101114] font-mono text-xs font-semibold tracking-widest uppercase hover:bg-[#18C98A]/90 motion-transition-colors shadow-[0_0_15px_rgba(24,201,138,0.4)] cursor-pointer"
                   >
                     Send Project Brief
-                  </button>
+                  </MotionButton>
                 </div>
               </form>
             </div>
@@ -405,12 +399,12 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                 </div>
 
                 <div className="pt-4 flex justify-end">
-                  <button
+                  <MotionButton
                     type="submit"
-                    className="px-8 py-3 rounded bg-[#18C98A] text-[#101114] font-mono text-xs font-semibold tracking-widest uppercase hover:bg-[#18C98A]/90 transition-all shadow-[0_0_15px_rgba(24,201,138,0.4)] cursor-pointer"
+                    className="px-8 py-3 rounded bg-[#18C98A] text-[#101114] font-mono text-xs font-semibold tracking-widest uppercase hover:bg-[#18C98A]/90 motion-transition-colors shadow-[0_0_15px_rgba(24,201,138,0.4)] cursor-pointer"
                   >
                     Submit Details
-                  </button>
+                  </MotionButton>
                 </div>
               </form>
             </div>
@@ -424,17 +418,17 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                 <div className="flex items-center gap-4">
                   <a
                     href={`mailto:${persona.email}`}
-                    className="text-2xl sm:text-4xl font-sans font-light tracking-tight hover:text-[#18C98A] transition-colors text-[#f2f4f3]"
+                    className="text-2xl sm:text-4xl font-sans font-light tracking-tight hover:text-[#18C98A] motion-transition-colors text-[#f2f4f3]"
                   >
                     {persona.email}
                   </a>
-                  <button
+                  <MotionButton
                     onClick={handleCopyEmail}
-                    className="p-2 rounded border border-[#18C98A]/30 hover:bg-[#18C98A]/10 text-[#18C98A] transition-colors cursor-pointer"
+                    className="p-2 rounded border border-[#18C98A]/30 hover:bg-[#18C98A]/10 text-[#18C98A] motion-transition-colors cursor-pointer"
                     title="Copy Email"
                   >
                     {copiedEmail ? <Check className="w-4 h-4 text-[#18C98A]" /> : <Copy className="w-4 h-4" />}
-                  </button>
+                  </MotionButton>
                 </div>
               </div>
 
@@ -470,7 +464,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                     href={persona.linkedin}
                     target="_blank"
                     rel="noreferrer"
-                    className="px-4 py-2 rounded border border-[#18C98A]/30 hover:border-[#18C98A] hover:text-[#18C98A] transition-colors"
+                    className="px-4 py-2 rounded border border-[#18C98A]/30 hover:border-[#18C98A] hover:text-[#18C98A] motion-transition-colors"
                   >
                     LinkedIn
                   </a>
@@ -478,7 +472,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                     href="https://stock.adobe.com"
                     target="_blank"
                     rel="noreferrer"
-                    className="px-4 py-2 rounded border border-[#18C98A]/30 hover:border-[#18C98A] hover:text-[#18C98A] transition-colors"
+                    className="px-4 py-2 rounded border border-[#18C98A]/30 hover:border-[#18C98A] hover:text-[#18C98A] motion-transition-colors"
                   >
                     Adobe Stock Contributor
                   </a>
@@ -486,10 +480,10 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               </div>
             </div>
           )}
-        </motion.div>
+        </MotionTabPanel>
         </AnimatePresence>
-      </motion.div>
-    </motion.div>
+      </MotionModalContent>
+    </MotionModalBackdrop>
       )}
     </AnimatePresence>
   );

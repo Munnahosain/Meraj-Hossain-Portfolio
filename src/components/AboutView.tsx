@@ -1,7 +1,7 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { MerajProfile, TimeTheme } from '../types';
 import { ArrowUpRight, Award, Briefcase, GraduationCap } from 'lucide-react';
+import { FadeUp, MotionButton } from './motion/MotionPrimitives';
 
 interface AboutViewProps {
   persona: MerajProfile;
@@ -24,11 +24,10 @@ export const AboutView: React.FC<AboutViewProps> = ({
     >
       <div className="max-w-[1720px] mx-auto px-6 sm:px-12">
         {/* Massive Headline Statement */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.25 }}
-          transition={{ duration: 0.6, ease: [0.76, 0, 0.24, 1] }}
+        <FadeUp
+          inView
+          once
+          amount={0.25}
           className="pb-16 border-b border-[#18C98A]/15"
         >
           <span className="font-mono text-[11px] tracking-widest uppercase text-[#18C98A] block mb-4">
@@ -40,14 +39,14 @@ export const AboutView: React.FC<AboutViewProps> = ({
           >
             {persona.headline}
           </h1>
-        </motion.div>
+        </FadeUp>
 
         {/* Primary Split: Portrait & Biography */}
-        <motion.div
-          initial={{ opacity: 0, y: 28 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.12 }}
-          transition={{ duration: 0.7, delay: 0.08, ease: [0.76, 0, 0.24, 1] }}
+        <FadeUp
+          inView
+          once
+          amount={0.12}
+          delay={0.08}
           className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 py-16 border-b border-[#18C98A]/15 items-start"
         >
           {/* Portrait Column */}
@@ -56,7 +55,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
               <img
                 src={persona.avatarImage}
                 alt={persona.name}
-                className="w-full h-[520px] sm:h-[600px] object-cover grayscale-[15%] hover:grayscale-0 transition-all duration-700"
+                className="w-full h-[520px] sm:h-[600px] object-cover grayscale-[15%] hover:grayscale-0 transition-[filter] duration-[var(--motion-duration-emphasis)] ease-[var(--motion-ease-enter)]"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#101114] via-transparent to-transparent flex items-end p-6">
                 <div>
@@ -214,23 +213,22 @@ export const AboutView: React.FC<AboutViewProps> = ({
               <p className="text-sm sm:text-base text-[#8e9693] leading-relaxed font-light">
                 Available for commercial motion graphics, video editing, social media campaign creative direction, and brand design contracts globally.
               </p>
-              <button
+              <MotionButton
                 onClick={onOpenContact}
-                className="inline-flex items-center gap-2 font-mono text-[11px] tracking-widest uppercase text-[#18C98A] hover:text-[#18C98A]/80 transition-colors pt-2 cursor-pointer"
+                className="inline-flex items-center gap-2 font-mono text-[11px] tracking-widest uppercase text-[#18C98A] hover:text-[#18C98A]/80 motion-transition-colors pt-2 cursor-pointer"
               >
                 <span>Let's build together — Open Brief</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
-              </button>
+              </MotionButton>
             </div>
           </div>
-        </motion.div>
+        </FadeUp>
 
         {/* 5-Step Motion Design Process */}
-        <motion.div
-          initial={{ opacity: 0, y: 28 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.18 }}
-          transition={{ duration: 0.65, ease: [0.76, 0, 0.24, 1] }}
+        <FadeUp
+          inView
+          once
+          amount={0.18}
           className="py-20 border-b border-[#18C98A]/15"
         >
           <div className="mb-12">
@@ -261,14 +259,13 @@ export const AboutView: React.FC<AboutViewProps> = ({
               </div>
             ))}
           </div>
-        </motion.div>
+        </FadeUp>
 
         {/* Clients & Recognition Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 28 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.18 }}
-          transition={{ duration: 0.65, ease: [0.76, 0, 0.24, 1] }}
+        <FadeUp
+          inView
+          once
+          amount={0.18}
           className="py-20"
         >
           <div className="mb-10">
@@ -290,7 +287,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
               </div>
             ))}
           </div>
-        </motion.div>
+        </FadeUp>
       </div>
     </div>
   );

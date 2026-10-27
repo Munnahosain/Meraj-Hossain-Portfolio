@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, useTransform, type MotionValue } from 'framer-motion';
 import { MerajProfile, TimeTheme } from '../types';
+import { MotionButton } from './motion/MotionPrimitives';
 
 interface HeaderProps {
   persona: MerajProfile;
@@ -247,11 +248,11 @@ export const Header: React.FC<HeaderProps> = ({
               style={{ transitionDelay: '120ms' }}
             >
               <div className="relative overflow-hidden h-[15px]">
-                <div className="transition-transform duration-300 ease-out group-hover:-translate-y-full">
+                <div className="motion-transition-transform group-hover:-translate-y-full">
                   <span>MERAJ</span>
                 </div>
                 <div
-                  className="absolute top-0 left-0 transition-transform duration-300 ease-out translate-y-full group-hover:translate-y-0"
+                  className="absolute top-0 left-0 motion-transition-transform translate-y-full group-hover:translate-y-0"
                   style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
                 >
                   <span>MERAJ</span>
@@ -267,11 +268,11 @@ export const Header: React.FC<HeaderProps> = ({
               style={{ transitionDelay: '220ms' }}
             >
               <div className="relative overflow-hidden h-[15px]">
-                <div className="transition-transform duration-300 ease-out group-hover:-translate-y-full">
+                <div className="motion-transition-transform group-hover:-translate-y-full">
                   <span>HOSSAIN</span>
                 </div>
                 <div
-                  className="absolute top-0 left-0 transition-transform duration-300 ease-out translate-y-full group-hover:translate-y-0"
+                  className="absolute top-0 left-0 motion-transition-transform translate-y-full group-hover:translate-y-0"
                   style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
                 >
                   <span>HOSSAIN</span>
@@ -349,7 +350,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right: Stacked MENU / CONTACT & Architectural Reference Clock Widget */}
         <div
-          className={`absolute inset-0 transition-opacity duration-300 ${
+          className={`absolute inset-0 motion-transition-opacity ${
             isMenuOpen ? 'pointer-events-none opacity-0' : 'opacity-100'
           }`}
         >
@@ -365,22 +366,22 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
                 style={{ transitionDelay: '300ms' }}
               >
-                <button
+                <MotionButton
                   onClick={onToggleMenu || onOpenMenu}
                   className="group/menu relative block cursor-pointer text-left select-none"
                 >
                   <div className="relative overflow-hidden h-[16px]">
-                    <div className="transition-transform duration-300 ease-out group-hover/menu:-translate-y-full">
+                    <div className="motion-transition-transform group-hover/menu:-translate-y-full">
                       <span>{isMenuOpen ? 'CLOSE ✕' : 'MENU'}</span>
                     </div>
                     <div
-                      className="absolute top-0 left-0 transition-transform duration-300 ease-out translate-y-full group-hover/menu:translate-y-0"
+                      className="absolute top-0 left-0 motion-transition-transform translate-y-full group-hover/menu:translate-y-0"
                       style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
                     >
                       <span>{isMenuOpen ? 'CLOSE ✕' : 'MENU'}</span>
                     </div>
                   </div>
-                </button>
+                </MotionButton>
               </div>
             </div>
             {!isMenuOpen && (
@@ -391,22 +392,22 @@ export const Header: React.FC<HeaderProps> = ({
                   }`}
                   style={{ transitionDelay: '380ms' }}
                 >
-                  <button
+                  <MotionButton
                     onClick={onOpenContact}
                     className="group/contact relative block cursor-pointer text-left select-none mt-[1px]"
                   >
                     <div className="relative overflow-hidden h-[16px]">
-                      <div className="transition-transform duration-300 ease-out group-hover/contact:-translate-y-full">
+                      <div className="motion-transition-transform group-hover/contact:-translate-y-full">
                         <span>CONTACT</span>
                       </div>
                       <div
-                        className="absolute top-0 left-0 transition-transform duration-300 ease-out translate-y-full group-hover/contact:translate-y-0"
+                        className="absolute top-0 left-0 motion-transition-transform translate-y-full group-hover/contact:translate-y-0"
                         style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
                       >
                         <span>CONTACT</span>
                       </div>
                     </div>
-                  </button>
+                  </MotionButton>
                 </div>
               </div>
             )}
@@ -427,15 +428,15 @@ export const Header: React.FC<HeaderProps> = ({
                   style={{ transitionDelay: '360ms' }}
                 >
                   {isTimeOffset ? (
-                    <button
+                    <MotionButton
                       onClick={onResetTime}
-                      className="hover:opacity-75 transition-opacity cursor-pointer text-[10px] sm:text-[11px] font-medium tracking-[0.14em] flex items-center gap-1.5"
+                      className="hover:opacity-75 motion-transition-opacity cursor-pointer text-[10px] sm:text-[11px] font-medium tracking-[0.14em] flex items-center gap-1.5"
                       style={{ color: navTextColor }}
                       title="Click ✕ to reset to Live Dhaka Time"
                     >
                       <span>TIME TRAVEL</span>
                       <span className="text-[12px] leading-none">✕</span>
-                    </button>
+                    </MotionButton>
                   ) : (
                     <span className="opacity-80 tracking-[0.14em]">LOCAL TIME</span>
                   )}
@@ -449,14 +450,14 @@ export const Header: React.FC<HeaderProps> = ({
                   }`}
                   style={{ transitionDelay: '440ms' }}
                 >
-                  <button
+                  <MotionButton
                     onClick={handleQuickCycle}
-                    className="tabular-nums font-mono text-[11px] sm:text-[12px] hover:opacity-75 transition-opacity cursor-pointer block text-right"
+                    className="tabular-nums font-mono text-[11px] sm:text-[12px] hover:opacity-75 motion-transition-opacity cursor-pointer block text-right"
                     style={{ color: navTextColor }}
                     title="Click to cycle themes (Day → Evening Green → Night → Live)"
                   >
                     {displayTime}
-                  </button>
+                  </MotionButton>
                 </div>
               </div>
             </div>
@@ -471,7 +472,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div
                 ref={dialRef}
                 onPointerDown={handlePointerDown}
-                className="group relative h-[48px] w-[48px] sm:h-[52px] sm:w-[52px] rounded-full border border-solid cursor-grab active:cursor-grabbing flex items-center justify-center select-none touch-none transition-transform duration-300 ease-out hover:scale-110 active:scale-105"
+                className="group relative h-[48px] w-[48px] sm:h-[52px] sm:w-[52px] rounded-full border border-solid cursor-grab active:cursor-grabbing flex items-center justify-center select-none touch-none motion-transition-transform hover:scale-110 active:scale-105"
                 style={{
                   borderColor: navTextColor,
                   backgroundColor: 'transparent',
@@ -489,7 +490,7 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   {/* Inner Circle: Clean hollow circular ring */}
                   <div
-                    className="w-[8px] h-[8px] sm:w-[9px] sm:h-[9px] rounded-full mt-[4px] border-[1.5px] border-solid bg-transparent transition-colors duration-300"
+                    className="w-[8px] h-[8px] sm:w-[9px] sm:h-[9px] rounded-full mt-[4px] border-[1.5px] border-solid bg-transparent motion-transition-colors"
                     style={{
                       borderColor: navTextColor,
                     }}

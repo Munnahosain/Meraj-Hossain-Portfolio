@@ -6,6 +6,7 @@
 import React from 'react';
 import { motion, Variants, MotionValue } from 'framer-motion';
 import { TimeTheme } from '../types';
+import { motionTokens } from '../lib/motion';
 
 interface EditorialDeckCardsProps {
   isOpen: boolean;
@@ -54,7 +55,7 @@ const SignatureIcon: React.FC<{ color?: string }> = ({ color = 'currentColor' })
   </svg>
 );
 
-const MENU_REVEAL_EASE = [0.76, 0, 0.24, 1] as const;
+const MENU_REVEAL_EASE = motionTokens.easing.menu;
 
 // Parent deck container coordinating sequential entrance with staggerChildren
 const deckContainerVariants: Variants = {
@@ -85,7 +86,7 @@ const card2Variants: Variants = {
     rotateY: -8,
     scale: 0.95,
     transition: {
-      duration: 0.65,
+      duration: motionTokens.duration.navigationExit,
       ease: MENU_REVEAL_EASE,
     },
   },
@@ -96,7 +97,7 @@ const card2Variants: Variants = {
     rotateY: 0,
     scale: 1,
     transition: {
-      duration: 0.72,
+      duration: motionTokens.duration.navigation,
       ease: MENU_REVEAL_EASE,
     },
   },
@@ -110,7 +111,7 @@ const card3Variants: Variants = {
     rotateY: -12,
     scale: 0.93,
     transition: {
-      duration: 0.65,
+      duration: motionTokens.duration.navigationExit,
       ease: MENU_REVEAL_EASE,
     },
   },
@@ -121,7 +122,7 @@ const card3Variants: Variants = {
     rotateY: -1.5,
     scale: 1,
     transition: {
-      duration: 0.75,
+      duration: motionTokens.duration.navigationDepth,
       ease: MENU_REVEAL_EASE,
     },
   },

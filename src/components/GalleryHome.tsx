@@ -18,6 +18,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const scheduleFrameRef = useRef<(() => void) | null>(null);
 
   // Infinite Cases Array (3 sets: 18 items total for endless circular repeat)
   const infiniteCases = React.useMemo(() => {
@@ -94,6 +95,20 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
     setShutterPositions([-105, -105, -105, -105, -105]);
     frictionScrollerRef.current.reset();
 
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      calculateOffsets();
+      const blockWidth = setBlockWidthRef.current;
+      if (scrollRef.current && blockWidth > 0) {
+        scrollRef.current.scrollLeft = blockWidth;
+        targetScrollRef.current = blockWidth;
+        currentScrollRef.current = blockWidth;
+      }
+      setShutterPositions([0, 0, 0, 0, 0]);
+      setScaleProgress(1);
+      setIntroStage('interactive');
+      return;
+    }
+
     if (scrollRef.current && setBlockWidthRef.current > 0) {
       scrollRef.current.scrollLeft = setBlockWidthRef.current;
       targetScrollRef.current = setBlockWidthRef.current;
@@ -161,67 +176,69 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
   // Infinite Loop + Friction Momentum Coasting + Spring Bounce Engine
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el) return;
+    if (!el || introStage !== 'interactive') return;
+    const scrollElement = el;
 
-    let rafId: number;
+    let rafId: number | null = null;
     let isRunning = true;
     let lastTime = performance.now();
 
-    const smoothScrollLoop = () => {
+    const scheduleFrame = () => {
+      if (isRunning && rafId === null) {
+        rafId = requestAnimationFrame(smoothScrollLoop);
+      }
+    };
+    scheduleFrameRef.current = scheduleFrame;
+
+    function smoothScrollLoop() {
+      rafId = null;
       if (!isRunning) return;
       const now = performance.now();
       const dt = now - lastTime;
       lastTime = now;
 
-      if (introStage === 'interactive') {
-        // Step the spring physics engine: friction decay + momentum coasting + dynamic spring bounce
-        const physics = frictionScrollerRef.current.update(
-          currentScrollRef.current,
-          targetScrollRef.current,
-          dt
-        );
+      // Step the spring physics engine: friction decay + momentum coasting + dynamic spring bounce
+      const physics = frictionScrollerRef.current.update(
+        currentScrollRef.current,
+        targetScrollRef.current,
+        dt
+      );
 
-        if (!isDraggingRef.current) {
-          targetScrollRef.current = physics.newTarget;
-          currentScrollRef.current = physics.newScroll;
-          el.scrollLeft = physics.newScroll;
-        }
+      if (!isDraggingRef.current) {
+        targetScrollRef.current = physics.newTarget;
+        currentScrollRef.current = physics.newScroll;
+        scrollElement.scrollLeft = physics.newScroll;
+      }
 
-        // Drive physical spring scale purely on the vertical axis (scaleY) onto card DOM nodes
-        // Locking scaleX to 1.0 guarantees the visual gap between cards NEVER expands or changes!
-        const scaleVal = physics.dynamicScale;
-        const cards = cardRefs.current;
-        for (let i = 0; i < cards.length; i++) {
-          const cardEl = cards[i];
-          if (cardEl) {
-            cardEl.style.transform = `translate3d(0, 0, 0) scale(1, ${scaleVal})`;
-            cardEl.style.transformOrigin = 'center bottom';
-          }
-        }
-
-        // INFINITE CONTINUOUS LOOP WRAPPING (Never ends!)
-        const setWidth = setBlockWidthRef.current;
-        if (setWidth > 0 && !isDraggingRef.current) {
-          if (currentScrollRef.current >= 2 * setWidth) {
-            currentScrollRef.current -= setWidth;
-            targetScrollRef.current -= setWidth;
-            el.scrollLeft -= setWidth;
-          } else if (currentScrollRef.current <= 0.5 * setWidth) {
-            currentScrollRef.current += setWidth;
-            targetScrollRef.current += setWidth;
-            el.scrollLeft += setWidth;
-          }
+      // Drive physical spring scale purely on the vertical axis onto card DOM nodes.
+      const scaleVal = physics.dynamicScale;
+      const cards = cardRefs.current;
+      for (let i = 0; i < cards.length; i++) {
+        const cardEl = cards[i];
+        if (cardEl) {
+          cardEl.style.transform = `translate3d(0, 0, 0) scale(1, ${scaleVal})`;
+          cardEl.style.transformOrigin = 'center bottom';
         }
       }
 
-      rafId = requestAnimationFrame(smoothScrollLoop);
-    };
+      const setWidth = setBlockWidthRef.current;
+      if (setWidth > 0 && !isDraggingRef.current) {
+        if (currentScrollRef.current >= 2 * setWidth) {
+          currentScrollRef.current -= setWidth;
+          targetScrollRef.current -= setWidth;
+          scrollElement.scrollLeft -= setWidth;
+        } else if (currentScrollRef.current <= 0.5 * setWidth) {
+          currentScrollRef.current += setWidth;
+          targetScrollRef.current += setWidth;
+          scrollElement.scrollLeft += setWidth;
+        }
+      }
 
-    rafId = requestAnimationFrame(smoothScrollLoop);
+      if (physics.isMoving || isDraggingRef.current) scheduleFrame();
+    }
 
     // Mouse Wheel Handler with Auto-Accelerating Momentum
     const handleWheel = (e: WheelEvent) => {
-      if (introStage !== 'interactive') return;
       e.preventDefault();
 
       let delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
@@ -238,14 +255,16 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
       // Continuous spinning ("laga tar") = speed automatically accelerates up to 3.2x
       // Direction reversal or pause = resets immediately back to normal gentle speed
       frictionScrollerRef.current.addImpulse(delta, performance.now());
+      scheduleFrame();
     };
 
-    el.addEventListener('wheel', handleWheel, { passive: false });
+    scrollElement.addEventListener('wheel', handleWheel, { passive: false });
 
     return () => {
       isRunning = false;
-      cancelAnimationFrame(rafId);
-      el.removeEventListener('wheel', handleWheel);
+      scheduleFrameRef.current = null;
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      scrollElement.removeEventListener('wheel', handleWheel);
     };
   }, [introStage]);
 
@@ -259,6 +278,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
     startScrollRef.current = scrollRef.current.scrollLeft;
     setDraggedDistance(0);
     frictionScrollerRef.current.reset();
+    scheduleFrameRef.current?.();
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -285,6 +305,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
     if (Math.abs(dragVelocityRef.current) > 1.2) {
       frictionScrollerRef.current.addImpulse(-dx * 0.35);
     }
+    scheduleFrameRef.current?.();
   };
 
   const handleMouseUp = () => {
@@ -296,6 +317,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
     if (Math.abs(flingVelocity) > 2) {
       frictionScrollerRef.current.releaseFling(flingVelocity);
     }
+    scheduleFrameRef.current?.();
   };
 
   const isIntroActive = introStage !== 'interactive';

@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { animate, motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import gsap from 'gsap';
+import React, { useState, useEffect, useRef } from 'react';
+import { animate, motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
 import { ViewMode, CaseStudy, PortfolioData } from './types';
 import { ARCHIVE_ITEMS, CASE_STUDIES, MERAJ_PROFILE } from './data/portfolioData';
 import { getTimeTheme } from './utils/timeColor';
@@ -16,7 +15,9 @@ import { CaseStudyView } from './components/CaseStudyView';
 import { ArchiveView } from './components/ArchiveView';
 import { AboutView } from './components/AboutView';
 import { ContactModal } from './components/ContactModal';
+import { FadeUp, MotionButton } from './components/motion/MotionPrimitives';
 import { useLenis } from './hooks/useLenis';
+import { motionTokens } from './lib/motion';
 
 export default function App() {
   const [portfolio, setPortfolio] = useState<PortfolioData>({
@@ -28,38 +29,21 @@ export default function App() {
   const [selectedCase, setSelectedCase] = useState<CaseStudy | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
-  const viewTransitionRef = useRef<HTMLDivElement>(null);
   const menuProgress = useMotionValue(0);
-
-  useLayoutEffect(() => {
-    const view = viewTransitionRef.current;
-    if (!view) return;
-
-    const context = gsap.context(() => {
-      gsap.fromTo(
-        view,
-        { autoAlpha: 0, y: 20, clipPath: 'inset(0 0 7% 0)' },
-        {
-          autoAlpha: 1,
-          y: 0,
-          clipPath: 'inset(0 0 0% 0)',
-          duration: 0.65,
-          ease: 'power3.out',
-          clearProps: 'clipPath',
-        },
-      );
-    }, view);
-
-    return () => context.revert();
-  }, [view, selectedCase?.id]);
+  const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
+    if (shouldReduceMotion) {
+      menuProgress.set(isMenuOpen ? 1 : 0);
+      return;
+    }
+
     const animation = animate(menuProgress, isMenuOpen ? 1 : 0, {
-      duration: 0.72,
-      ease: [0.76, 0, 0.24, 1],
+      duration: motionTokens.duration.navigation,
+      ease: motionTokens.easing.menu,
     });
     return () => animation.stop();
-  }, [isMenuOpen, menuProgress]);
+  }, [isMenuOpen, menuProgress, shouldReduceMotion]);
 
   // Initialize Lenis smooth scroll for detail/editorial views
   useLenis(view !== 'home' && !isMenuOpen);
@@ -391,9 +375,8 @@ export default function App() {
       >
         {/* Keep the live home rail mounted while it becomes the menu's clipped hero window. */}
         {(!isMenuOpen || view === 'home') && (
-          <div
+          <FadeUp
             key={view === 'case-detail' ? selectedCase?.id || view : view}
-            ref={viewTransitionRef}
             className={`w-full ${view === 'home' ? 'h-full overflow-hidden' : 'min-h-full'}`}
             style={{ pointerEvents: isMenuOpen ? 'none' : 'auto' }}
           >
@@ -424,7 +407,7 @@ export default function App() {
                 theme={theme}
               />
             )}
-          </div>
+          </FadeUp>
         )}
 
         {/* Menu framing over the live gallery window */}
@@ -434,7 +417,11 @@ export default function App() {
               <motion.h2
                 initial={{ y: '110%' }}
                 animate={{ y: 0 }}
-                transition={{ duration: 0.55, delay: 0.72, ease: [0.76, 0, 0.24, 1] }}
+                transition={{
+                  duration: motionTokens.duration.navigationLabel,
+                  delay: motionTokens.duration.navigation,
+                  ease: motionTokens.easing.menu,
+                }}
                 className="text-3xl sm:text-4xl font-sans font-light lowercase leading-none"
               >
                 cases
@@ -468,7 +455,7 @@ export default function App() {
       {/* Mobile Indicator Buttons when in Menu mode */}
       {!isDesktop && isMenuOpen && (
         <div className="fixed bottom-6 inset-x-0 z-40 flex items-center justify-center gap-3 px-6 pointer-events-auto">
-          <button
+          <MotionButton
             onClick={() => handleNavigate('cases')}
             className="px-3.5 py-1.5 text-[10px] font-mono tracking-widest uppercase border"
             style={{
@@ -478,8 +465,8 @@ export default function App() {
             }}
           >
             Cases
-          </button>
-          <button
+          </MotionButton>
+          <MotionButton
             onClick={() => handleNavigate('archive')}
             className="px-3.5 py-1.5 text-[10px] font-mono tracking-widest uppercase border opacity-80"
             style={{
@@ -489,8 +476,8 @@ export default function App() {
             }}
           >
             Archive
-          </button>
-          <button
+          </MotionButton>
+          <MotionButton
             onClick={() => handleNavigate('about')}
             className="px-3.5 py-1.5 text-[10px] font-mono tracking-widest uppercase border opacity-80"
             style={{
@@ -500,7 +487,7 @@ export default function App() {
             }}
           >
             About
-          </button>
+          </MotionButton>
         </div>
       )}
 
