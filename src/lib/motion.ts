@@ -12,6 +12,7 @@ export const motionEngineTokens = {
   gsap: {
     pageExit: 'power2.in',
     pageEnter: 'power3.out',
+    scrollReveal: 'power3.out',
   },
 } as const;
 
@@ -29,12 +30,14 @@ export const motionTokens = {
     navigationLabel: 0.55,
     pageExit: 0.3,
     pageEnter: 0.55,
+    reveal: 0.7,
   },
   easing,
   distance: {
     small: 8,
     medium: 16,
     large: 24,
+    reveal: 24,
   },
   stagger: {
     tight: 0.04,

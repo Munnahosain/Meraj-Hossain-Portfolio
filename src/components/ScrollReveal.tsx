@@ -1,5 +1,6 @@
 import { useRef, Children, isValidElement, type ReactNode } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
+import { motionEngineTokens, motionTokens } from "../lib/motion";
 
 interface ScrollRevealProps {
   children: ReactNode;
@@ -7,7 +8,7 @@ interface ScrollRevealProps {
   delay?: number;
   /** If true, direct children animate in with a stagger */
   stagger?: boolean;
-  /** Stagger interval in ms (default 80) */
+  /** Stagger interval in ms (defaults to the shared standard stagger) */
   staggerMs?: number;
 }
 
@@ -16,7 +17,7 @@ export function ScrollReveal({
   className = "",
   delay = 0,
   stagger = false,
-  staggerMs = 80,
+  staggerMs = motionTokens.stagger.standard * 1000,
 }: ScrollRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -35,14 +36,14 @@ export function ScrollReveal({
 
         gsap.fromTo(
           targets,
-          { autoAlpha: 0, y: 24 },
+          { autoAlpha: 0, y: motionTokens.distance.reveal },
           {
             autoAlpha: 1,
             y: 0,
-            duration: 0.7,
+            duration: motionTokens.duration.reveal,
             delay: delay / 1000,
             stagger: stagger ? staggerMs / 1000 : 0,
-            ease: "power3.out",
+            ease: motionEngineTokens.gsap.scrollReveal,
             clearProps: "opacity,visibility,transform",
             scrollTrigger: {
               trigger: element,

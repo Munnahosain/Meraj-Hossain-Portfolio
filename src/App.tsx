@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { animate, motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
 import { ViewMode, CaseStudy, PortfolioData } from './types';
 import { ARCHIVE_ITEMS, CASE_STUDIES, MERAJ_PROFILE } from './data/portfolioData';
 import { getTimeTheme } from './utils/timeColor';
 import { Header } from './components/Header';
-import { GalleryHome } from './components/GalleryHome';
+import { GalleryHome, type GalleryMediaTransition } from './components/GalleryHome';
 import { EditorialDeckCards } from './components/EditorialDeckCards';
 import { CaseStudyView } from './components/CaseStudyView';
 import { ArchiveView } from './components/ArchiveView';
@@ -18,6 +19,30 @@ import { ContactModal } from './components/ContactModal';
 import { FadeUp, MotionButton } from './components/motion/MotionPrimitives';
 import { useLenis } from './hooks/useLenis';
 import { motionTokens } from './lib/motion';
+import {
+  getProjectAnimationSettings,
+  getProjectMotionEasing,
+} from './lib/project-motion';
+
+type SharedHeroImage = GalleryMediaTransition & {
+  phase: 'shutter' | 'handoff' | 'settled';
+  targetRect?: GalleryMediaTransition['rect'];
+};
+
+function getProjectSlugFromLocation() {
+  const match = window.location.pathname.match(/^\/projects\/([^/]+)\/?$/);
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return null;
+  }
+}
+
+function getProjectUrl(caseStudy: CaseStudy) {
+  const slug = caseStudy.slug || caseStudy.id;
+  return `/projects/${encodeURIComponent(slug)}${caseStudy.status === 'draft' ? '?preview=true' : ''}`;
+}
 
 export default function App() {
   const [portfolio, setPortfolio] = useState<PortfolioData>({
@@ -25,8 +50,24 @@ export default function App() {
     caseStudies: CASE_STUDIES,
     archiveItems: ARCHIVE_ITEMS,
   });
-  const [view, setView] = useState<ViewMode>('home');
-  const [selectedCase, setSelectedCase] = useState<CaseStudy | null>(null);
+  const [view, setView] = useState<ViewMode>(() =>
+    CASE_STUDIES.some((item) => {
+      const slug = getProjectSlugFromLocation();
+      return slug && (item.slug === slug || item.id === slug);
+    })
+      ? 'case-detail'
+      : 'home',
+  );
+  const [selectedCase, setSelectedCase] = useState<CaseStudy | null>(() => {
+    const slug = getProjectSlugFromLocation();
+    return slug ? CASE_STUDIES.find((item) => item.slug === slug || item.id === slug) || null : null;
+  });
+  const [transitionTarget, setTransitionTarget] = useState<CaseStudy | null>(null);
+  const [transitionSelectionKey, setTransitionSelectionKey] = useState<string | null>(null);
+  const [sharedHeroImage, setSharedHeroImage] = useState<SharedHeroImage | null>(null);
+  const sharedHeroLayerRef = useRef<HTMLDivElement>(null);
+  const transitionLockRef = useRef(false);
+  const transitionTimerRef = useRef<number | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
   const menuProgress = useMotionValue(0);
@@ -46,7 +87,7 @@ export default function App() {
   }, [isMenuOpen, menuProgress, shouldReduceMotion]);
 
   // Initialize Lenis smooth scroll for detail/editorial views
-  useLenis(view !== 'home' && !isMenuOpen);
+  useLenis(view !== 'home' && view !== 'case-detail' && !isMenuOpen);
 
   // Time Engine: Default to Dhaka live time (UTC+6)
   const getDhakaHour = () => {
@@ -64,12 +105,38 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
-    fetch('/api/portfolio')
+    const previewMode = new URLSearchParams(window.location.search).get('preview') === 'true';
+    fetch(`/api/portfolio${previewMode ? '?preview=true' : ''}`)
       .then((response) => (response.ok ? response.json() : null))
       .then((data: PortfolioData | null) => {
-        if (active && data?.profile && data.caseStudies && data.archiveItems) setPortfolio(data);
+        if (!active || !data?.profile || !data.caseStudies || !data.archiveItems) return;
+        setPortfolio(data);
+        const slug = getProjectSlugFromLocation();
+        if (!slug) return;
+        const matchedCase = data.caseStudies.find(
+          (item) => item.slug === slug || item.id === slug,
+        );
+        if (matchedCase) {
+          setSelectedCase(matchedCase);
+          setView('case-detail');
+          document.title = `${matchedCase.title.replace(/\n/g, ' ')} — Meraj Hossain`;
+        } else {
+          window.history.replaceState({ portfolioView: 'home' }, '', '/');
+          setSelectedCase(null);
+          setView('home');
+        }
       })
-      .catch(() => undefined);
+      .catch(() => {
+        const slug = getProjectSlugFromLocation();
+        const bundledCase = slug
+          ? CASE_STUDIES.find((item) => item.slug === slug || item.id === slug)
+          : null;
+        if (active && slug && !bundledCase) {
+          window.history.replaceState({ portfolioView: 'home' }, '', '/');
+          setSelectedCase(null);
+          setView('home');
+        }
+      });
     return () => {
       active = false;
     };
@@ -127,12 +194,179 @@ export default function App() {
     setIsTimeOffset(false);
   };
 
-  const handleSelectCase = (cs: CaseStudy) => {
-    setSelectedCase(cs);
-    setView('case-detail');
+  const handleSelectCase = (
+    cs: CaseStudy,
+    selectionKey?: string,
+    media?: GalleryMediaTransition,
+  ) => {
+    if (transitionLockRef.current) return;
+    transitionLockRef.current = true;
+
+    if (
+      !selectionKey ||
+      !media ||
+      shouldReduceMotion ||
+      getProjectAnimationSettings(cs).preset === 'reduced-motion'
+    ) {
+      setSharedHeroImage(null);
+      setSelectedCase(cs);
+      setView('case-detail');
+      window.history.pushState(
+        { portfolioView: 'project', slug: cs.slug || cs.id },
+        '',
+        getProjectUrl(cs),
+      );
+      document.title = `${cs.title.replace(/\n/g, ' ')} — Meraj Hossain`;
+      transitionLockRef.current = false;
+      return;
+    }
+
+    setTransitionTarget(cs);
+    setTransitionSelectionKey(selectionKey);
+    setSharedHeroImage({ ...media, phase: 'shutter' });
+    transitionTimerRef.current = window.setTimeout(() => {
+      const slug = cs.slug || cs.id;
+      setSelectedCase(cs);
+      setView('case-detail');
+      setSharedHeroImage((current) =>
+        current ? { ...current, phase: 'handoff', targetRect: undefined } : null,
+      );
+      window.history.pushState(
+        { portfolioView: 'project', slug },
+        '',
+        getProjectUrl(cs),
+      );
+      document.title = `${cs.title.replace(/\n/g, ' ')} — Meraj Hossain`;
+      setTransitionTarget(null);
+      setTransitionSelectionKey(null);
+      transitionLockRef.current = false;
+      transitionTimerRef.current = null;
+    }, 850);
   };
 
+  const handleBackToGallery = () => {
+    if (transitionTimerRef.current !== null) {
+      window.clearTimeout(transitionTimerRef.current);
+      transitionTimerRef.current = null;
+    }
+    transitionLockRef.current = false;
+    setTransitionTarget(null);
+    setTransitionSelectionKey(null);
+    setSharedHeroImage(null);
+    if (window.location.pathname !== '/') {
+      window.history.replaceState({ portfolioView: 'home' }, '', '/');
+    }
+    document.title = 'Meraj Hossain — Motion Graphics & Visual Designer Portfolio';
+    setSelectedCase(null);
+    setView('home');
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (transitionTimerRef.current !== null) {
+        window.clearTimeout(transitionTimerRef.current);
+        transitionTimerRef.current = null;
+      }
+      transitionLockRef.current = false;
+      setTransitionTarget(null);
+      setTransitionSelectionKey(null);
+      setSharedHeroImage(null);
+      const slug = getProjectSlugFromLocation();
+      if (!slug) {
+        setSelectedCase(null);
+        setView('home');
+        document.title = 'Meraj Hossain — Motion Graphics & Visual Designer Portfolio';
+        return;
+      }
+
+      const matchedCase = portfolio.caseStudies.find(
+        (item) => item.slug === slug || item.id === slug,
+      );
+      if (!matchedCase) {
+        window.history.replaceState({ portfolioView: 'home' }, '', '/');
+        setSelectedCase(null);
+        setView('home');
+        return;
+      }
+      setSelectedCase(matchedCase);
+      setView('case-detail');
+      document.title = `${matchedCase.title.replace(/\n/g, ' ')} — Meraj Hossain`;
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [portfolio.caseStudies]);
+
+  const cancelProjectTransition = () => {
+    if (transitionTimerRef.current !== null) {
+      window.clearTimeout(transitionTimerRef.current);
+      transitionTimerRef.current = null;
+    }
+    transitionLockRef.current = false;
+    setTransitionTarget(null);
+    setTransitionSelectionKey(null);
+    setSharedHeroImage(null);
+  };
+
+  const handleSharedHeroTargetReady = useCallback((
+    rect: NonNullable<SharedHeroImage['targetRect']>,
+  ) => {
+    setSharedHeroImage((current) =>
+      current?.phase === 'handoff' ? { ...current, targetRect: rect } : current,
+    );
+  }, []);
+
+  useEffect(() => {
+    if (
+      view !== 'case-detail' ||
+      sharedHeroImage?.phase !== 'handoff' ||
+      !sharedHeroImage.targetRect ||
+      !sharedHeroLayerRef.current
+    ) {
+      return;
+    }
+
+    const source = sharedHeroImage.rect;
+    const destination = sharedHeroImage.targetRect;
+    const deltaX = source.left - destination.left;
+    const deltaY = source.top - destination.top;
+    const scaleX = source.width / destination.width;
+    const scaleY = source.height / destination.height;
+    const inverseTransform =
+      `translate3d(${deltaX}px, ${deltaY}px, 0) scale(${scaleX}, ${scaleY})`;
+    const easing = getProjectMotionEasing(selectedCase).join(', ');
+    const animation = sharedHeroLayerRef.current.animate(
+      [
+        { transform: inverseTransform },
+        { transform: 'translate3d(0, 0, 0) scale(1, 1)' },
+      ],
+      {
+        duration: 420,
+        easing: `cubic-bezier(${easing})`,
+        fill: 'forwards',
+      },
+    );
+
+    animation.onfinish = () => {
+      setSharedHeroImage((current) =>
+        current?.phase === 'handoff' ? { ...current, phase: 'settled' } : current,
+      );
+    };
+
+    return () => animation.cancel();
+  }, [
+    selectedCase,
+    sharedHeroImage?.phase,
+    sharedHeroImage?.rect,
+    sharedHeroImage?.targetRect,
+    view,
+  ]);
+
   const handleNavigate = (newView: 'home' | 'cases' | 'archive' | 'about') => {
+    cancelProjectTransition();
+    if (window.location.pathname !== '/') {
+      window.history.replaceState({ portfolioView: 'home' }, '', '/');
+    }
     if (newView === 'cases') {
       setView('home');
     } else {
@@ -148,7 +382,7 @@ export default function App() {
       if (e.key === 'Escape') {
         if (isMenuOpen) setIsMenuOpen(false);
         else if (isContactOpen) setIsContactOpen(false);
-        else if (view === 'case-detail') setView('home');
+        else if (view === 'case-detail') handleBackToGallery();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -291,7 +525,13 @@ export default function App() {
   // Active theme / menu colors
   const activeBg = isMenuOpen ? FIXED_MENU_DARK_GREEN : theme.bg;
   const activeText = isMenuOpen ? '#E5EADF' : theme.text;
-  const featuredCases = portfolio.caseStudies.slice(0, 2);
+  const featuredCases = useMemo(
+    () =>
+      portfolio.caseStudies
+        .filter((item) => item.heroVisible !== false && item.status !== 'draft')
+        .sort((left, right) => Number(Boolean(right.featured)) - Number(Boolean(left.featured))),
+    [portfolio.caseStudies],
+  );
 
   return (
     <div
@@ -318,10 +558,19 @@ export default function App() {
         persona={portfolio.profile}
         activeView={view}
         onNavigate={handleNavigate}
-        onOpenMenu={() => setIsMenuOpen(true)}
-        onToggleMenu={() => setIsMenuOpen((prev) => !prev)}
+        onOpenMenu={() => {
+          cancelProjectTransition();
+          setIsMenuOpen(true);
+        }}
+        onToggleMenu={() => {
+          cancelProjectTransition();
+          setIsMenuOpen((prev) => !prev);
+        }}
         isMenuOpen={isMenuOpen}
-        onOpenContact={() => setIsContactOpen(true)}
+        onOpenContact={() => {
+          cancelProjectTransition();
+          setIsContactOpen(true);
+        }}
         currentHour={currentHour}
         onTimeChange={handleTimeChange}
         onResetTime={handleResetTime}
@@ -353,9 +602,9 @@ export default function App() {
         className={`fixed ${
           isMenuOpen
             ? 'group cursor-pointer select-none overflow-hidden no-scrollbar'
-            : view === 'home'
+            : view === 'home' || view === 'case-detail'
             ? 'overflow-hidden no-scrollbar'
-            : 'overflow-y-auto'
+            : 'overflow-y-auto no-scrollbar'
         }`}
         style={{
           x: deckRepelX,
@@ -377,13 +626,22 @@ export default function App() {
         {(!isMenuOpen || view === 'home') && (
           <FadeUp
             key={view === 'case-detail' ? selectedCase?.id || view : view}
-            className={`w-full ${view === 'home' ? 'h-full overflow-hidden' : 'min-h-full'}`}
+            className={`w-full ${
+              view === 'home'
+                ? 'h-full overflow-hidden'
+                : view === 'case-detail'
+                  ? 'h-full overflow-hidden'
+                  : 'min-h-full'
+            }`}
             style={{ pointerEvents: isMenuOpen ? 'none' : 'auto' }}
           >
             {view === 'home' && (
               <GalleryHome
-                cases={portfolio.caseStudies}
+                cases={featuredCases}
                 onSelectCase={handleSelectCase}
+                isTransitioning={Boolean(transitionTarget)}
+                transitionSelectionKey={transitionSelectionKey}
+                transitionEasing={transitionTarget ? getProjectMotionEasing(transitionTarget) : undefined}
                 theme={theme}
               />
             )}
@@ -393,8 +651,18 @@ export default function App() {
                 caseStudy={selectedCase}
                 allCases={portfolio.caseStudies}
                 onSelectCase={handleSelectCase}
-                onBack={() => setView('home')}
+                onBack={handleBackToGallery}
                 theme={theme}
+                sharedHeroSize={
+                  sharedHeroImage
+                    ? {
+                        width: sharedHeroImage.rect.width,
+                        height: sharedHeroImage.rect.height,
+                      }
+                    : undefined
+                }
+                isSharedHeroAnimating={sharedHeroImage?.phase === 'handoff'}
+                onHeroImageReady={handleSharedHeroTargetReady}
               />
             )}
 
@@ -498,6 +766,37 @@ export default function App() {
         persona={portfolio.profile}
         theme={theme}
       />
+
+      {view === 'case-detail' &&
+        sharedHeroImage?.phase === 'handoff' &&
+        createPortal(
+          <div
+            ref={sharedHeroLayerRef}
+            className="pointer-events-none overflow-hidden"
+            style={{
+              position: 'fixed',
+              left: sharedHeroImage.targetRect?.left ?? sharedHeroImage.rect.left,
+              top: sharedHeroImage.targetRect?.top ?? sharedHeroImage.rect.top,
+              width: sharedHeroImage.targetRect?.width ?? sharedHeroImage.rect.width,
+              height: sharedHeroImage.targetRect?.height ?? sharedHeroImage.rect.height,
+              transformOrigin: 'top left',
+              transform: sharedHeroImage.targetRect
+                ? `translate3d(${sharedHeroImage.rect.left - sharedHeroImage.targetRect.left}px, ${sharedHeroImage.rect.top - sharedHeroImage.targetRect.top}px, 0) scale(${sharedHeroImage.rect.width / sharedHeroImage.targetRect.width}, ${sharedHeroImage.rect.height / sharedHeroImage.targetRect.height})`
+                : 'none',
+              willChange: 'transform',
+              zIndex: 35,
+            }}
+            aria-hidden="true"
+          >
+            <img
+              src={sharedHeroImage.src}
+              alt=""
+              className="block h-full w-full object-cover"
+            />
+          </div>,
+          document.body,
+        )}
+
     </div>
   );
 }

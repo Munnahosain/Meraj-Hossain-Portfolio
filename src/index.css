@@ -93,6 +93,25 @@ html.admin-scroll body {
   transform: translateY(-50%);
 }
 
+.text-roll-current,
+.text-roll-next {
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.text-roll-next {
+  transform: translateY(100%);
+}
+
+.text-roll-window:hover .text-roll-current,
+.text-roll-window:focus-within .text-roll-current {
+  transform: translateY(-100%);
+}
+
+.text-roll-window:hover .text-roll-next,
+.text-roll-window:focus-within .text-roll-next {
+  transform: translateY(0);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

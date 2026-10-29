@@ -1,11 +1,30 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { CaseStudy, TimeTheme } from '../types';
 import { FrictionScroller } from '../utils/frictionScroll';
+import type { ProjectMotionEasing } from '../lib/project-motion';
 
 interface GalleryHomeProps {
   cases: CaseStudy[];
-  onSelectCase: (caseStudy: CaseStudy) => void;
+  onSelectCase: (
+    caseStudy: CaseStudy,
+    selectionKey: string,
+    media: GalleryMediaTransition,
+  ) => void;
+  isTransitioning?: boolean;
+  transitionSelectionKey?: string | null;
+  transitionEasing?: ProjectMotionEasing;
   theme: TimeTheme;
+}
+
+export interface GalleryMediaTransition {
+  src: string;
+  alt: string;
+  rect: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
 }
 
 type IntroStage = 'measuring' | 'shutter' | 'dealing' | 'interactive';
@@ -13,11 +32,15 @@ type IntroStage = 'measuring' | 'shutter' | 'dealing' | 'interactive';
 export const GalleryHome: React.FC<GalleryHomeProps> = ({
   cases,
   onSelectCase,
+  isTransitioning = false,
+  transitionSelectionKey = null,
+  transitionEasing = [0.76, 0, 0.24, 1],
   theme,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const mediaRefs = useRef<(HTMLDivElement | null)[]>([]);
   const scheduleFrameRef = useRef<(() => void) | null>(null);
 
   // Infinite Cases Array (3 sets: 18 items total for endless circular repeat)
@@ -176,7 +199,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
   // Infinite Loop + Friction Momentum Coasting + Spring Bounce Engine
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || introStage !== 'interactive') return;
+    if (!el || introStage !== 'interactive' || isTransitioning) return;
     const scrollElement = el;
 
     let rafId: number | null = null;
@@ -266,7 +289,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
       if (rafId !== null) cancelAnimationFrame(rafId);
       scrollElement.removeEventListener('wheel', handleWheel);
     };
-  }, [introStage]);
+  }, [introStage, isTransitioning]);
 
   // Mouse Drag Handlers with Fling Release Velocity
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -274,6 +297,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
     isDraggingRef.current = true;
     startXRef.current = e.pageX;
     lastXRef.current = e.pageX;
+    dragVelocityRef.current = 0;
     lastTimeRef.current = performance.now();
     startScrollRef.current = scrollRef.current.scrollLeft;
     setDraggedDistance(0);
@@ -318,6 +342,32 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
       frictionScrollerRef.current.releaseFling(flingVelocity);
     }
     scheduleFrameRef.current?.();
+  };
+
+  const stopGalleryMotion = () => {
+    isDraggingRef.current = false;
+    dragVelocityRef.current = 0;
+    frictionScrollerRef.current.reset();
+    targetScrollRef.current = scrollRef.current?.scrollLeft ?? currentScrollRef.current;
+    currentScrollRef.current = targetScrollRef.current;
+  };
+
+  const selectCase = (item: CaseStudy, idx: number, selectionKey: string) => {
+    const media = mediaRefs.current[idx];
+    if (!media) return;
+
+    const rect = media.getBoundingClientRect();
+    const video = media.querySelector('video');
+    const image = media.querySelector('img');
+    const src = video
+      ? video.poster || item.coverPoster || item.coverImage
+      : image?.currentSrc || item.coverPoster || item.coverImage;
+
+    onSelectCase(item, selectionKey, {
+      src,
+      alt: item.title.replace('\n', ' '),
+      rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+    });
   };
 
   const isIntroActive = introStage !== 'interactive';
@@ -388,10 +438,19 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        className={`w-full overflow-x-auto no-scrollbar flex gap-2.5 sm:gap-3 px-4 sm:px-8 pt-2 sm:pt-3 items-stretch h-[75vh] sm:h-[78vh] md:h-[79vh] ${
-          introStage === 'interactive' ? 'cursor-grab active:cursor-grabbing' : 'overflow-hidden pointer-events-none'
+        className={`w-full no-scrollbar flex gap-2.5 sm:gap-3 px-4 sm:px-8 pt-2 sm:pt-3 items-stretch h-[75vh] sm:h-[78vh] md:h-[79vh] ${
+          introStage === 'interactive'
+            ? isTransitioning
+              ? 'overflow-x-auto pointer-events-none'
+              : 'overflow-x-auto cursor-grab active:cursor-grabbing'
+            : 'overflow-hidden pointer-events-none'
         }`}
       >
+        {cases.length === 0 && (
+          <div className="grid h-full w-full place-items-center px-6 text-center font-mono text-xs uppercase tracking-widest opacity-60">
+            No projects are currently featured.
+          </div>
+        )}
         {infiniteCases.map((item, idx) => {
           const isHovered = hoveredIndex === idx;
 
@@ -402,6 +461,8 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
           // Middle set offset for intro animation
           const isMiddleSet = setIndex === 1;
           const offsetX = isMiddleSet ? centerOffsets[itemIndexInSet] || 0 : 0;
+          const selectionKey = `${item.id}-${idx}`;
+          const isSelectedCard = selectionKey === transitionSelectionKey;
 
           // Left/Right split condition for middle set
           const isLeftGroup = itemIndexInSet < 3;
@@ -449,19 +510,40 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
                 if (!isIntroActive) setHoveredIndex(null);
               }}
               onClick={() => {
-                if (!isIntroActive && draggedDistance < 10) {
-                  onSelectCase(item);
+                if (!isIntroActive && !isTransitioning && draggedDistance < 10) {
+                  stopGalleryMotion();
+                  selectCase(item, idx, selectionKey);
                 }
               }}
+              onKeyDown={(event) => {
+                if (
+                  !isIntroActive &&
+                  !isTransitioning &&
+                  draggedDistance < 10 &&
+                  (event.key === 'Enter' || event.key === ' ')
+                ) {
+                  event.preventDefault();
+                  stopGalleryMotion();
+                  selectCase(item, idx, selectionKey);
+                }
+              }}
+              role="button"
+              tabIndex={isIntroActive || isTransitioning ? -1 : 0}
+              aria-label={`Open ${item.title.replace('\n', ' ')} case study`}
+              aria-disabled={isIntroActive || isTransitioning}
               style={{
                 transform: cardTransform,
                 transformOrigin: 'center bottom',
                 opacity: cardOpacity,
-                zIndex: isHovered ? 10 : cardZIndex,
-                transition: cardTransition,
-                willChange: 'transform, opacity',
+                zIndex: isSelectedCard ? 20 : isHovered ? 10 : cardZIndex,
+                clipPath:
+                  isTransitioning && !isSelectedCard ? 'inset(0 0 100% 0)' : 'inset(0)',
+                transition: isTransitioning
+                  ? `clip-path 700ms cubic-bezier(${transitionEasing.join(', ')}) ${Math.min(itemIndexInSet * 20, 100)}ms`
+                  : cardTransition,
+                willChange: isTransitioning ? 'clip-path' : 'transform, opacity',
               }}
-              className="group relative flex-shrink-0 w-[78vw] sm:w-[48vw] md:w-[35vw] lg:w-[26vw] max-w-[480px] h-full flex flex-col justify-between cursor-pointer transform-gpu select-none"
+              className="group relative flex-shrink-0 w-[78vw] sm:w-[48vw] md:w-[35vw] lg:w-[26vw] max-w-[480px] h-full flex flex-col justify-between cursor-pointer transform-gpu select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#18C98A]"
             >
               {/* Subtle Upward Card Lift on Hover: halka ekto upore uthbe (6px to 8px) without zooming image/video */}
               <div
@@ -489,6 +571,9 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
 
                 {/* Media Container extending directly down with 2px bottom gap - No zoom, clean lift & subtle accent glow */}
                 <div
+                  ref={(el) => {
+                    mediaRefs.current[idx] = el;
+                  }}
                   className={`relative w-full flex-1 overflow-hidden bg-[#16181e] transform-gpu transition-all duration-300 ${
                     isHovered && !isIntroActive ? 'ring-1 ring-[#18C98A]/35' : ''
                   }`}

@@ -188,9 +188,21 @@ export const EditorialDeckCards: React.FC<EditorialDeckCardsProps> = ({
       >
         {/* Top Header: MERAJ / HOSSAIN on left + Signature on right */}
         <div className="flex items-start justify-between w-full">
-          <div className="font-sans text-[11px] font-normal tracking-[0.14em] uppercase leading-[1.25] opacity-85">
-            <div>MERAJ</div>
-            <div>HOSSAIN</div>
+          <div className="header-name-roll cursor-pointer font-sans text-[11px] font-normal tracking-[0.14em] uppercase leading-[1.25] opacity-85">
+            {["MERAJ", "HOSSAIN"].map((name) => (
+              <div key={name} className="text-roll-window relative h-[14px] overflow-hidden">
+                <div className="text-roll-current">
+                  {name}
+                </div>
+                <div
+                  aria-hidden="true"
+                  className="text-roll-next absolute inset-0"
+                  style={{ color: theme.isLight ? "#0B8A5A" : "#34EEA0" }}
+                >
+                  {name}
+                </div>
+              </div>
+            ))}
           </div>
           <SignatureIcon color={theme.isLight ? '#18C98A' : theme.text} />
         </div>
@@ -272,9 +284,21 @@ export const EditorialDeckCards: React.FC<EditorialDeckCardsProps> = ({
       >
         {/* Top Header: MERAJ / HOSSAIN on left + Signature on right */}
         <div className="flex items-start justify-between w-full">
-          <div className="font-sans text-[11px] font-normal tracking-[0.14em] uppercase leading-[1.25] opacity-85">
-            <div>MERAJ</div>
-            <div>HOSSAIN</div>
+          <div className="header-name-roll cursor-pointer font-sans text-[11px] font-normal tracking-[0.14em] uppercase leading-[1.25] opacity-85">
+            {["MERAJ", "HOSSAIN"].map((name) => (
+              <div key={name} className="text-roll-window relative h-[14px] overflow-hidden">
+                <div className="text-roll-current">
+                  {name}
+                </div>
+                <div
+                  aria-hidden="true"
+                  className="text-roll-next absolute inset-0"
+                  style={{ color: theme.isLight ? "#0B8A5A" : "#34EEA0" }}
+                >
+                  {name}
+                </div>
+              </div>
+            ))}
           </div>
           <SignatureIcon color={theme.isLight ? '#18C98A' : theme.text} />
         </div>

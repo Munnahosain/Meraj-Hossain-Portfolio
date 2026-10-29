@@ -236,7 +236,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="relative h-[52px] w-full flex items-start justify-between">
         {/* Left: 2-line Clean MERAJ / HOSSAIN with Bottom-to-Top Text Reveal & Rolling Hover Animation */}
         <motion.div
-          className="group absolute left-0 top-0 cursor-pointer font-sans text-[12px] font-normal tracking-[0.14em] uppercase leading-[1.2]"
+          className="header-name-roll absolute left-0 top-0 cursor-pointer font-sans text-[12px] font-normal tracking-[0.14em] uppercase leading-[1.2]"
           style={{ color: nameTextColor, left: brandLeft, top: brandTop, x: deckRepelX }}
           onClick={() => onNavigate('home')}
         >
@@ -247,12 +247,12 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
               style={{ transitionDelay: '120ms' }}
             >
-              <div className="relative overflow-hidden h-[15px]">
-                <div className="motion-transition-transform group-hover:-translate-y-full">
+              <div className="text-roll-window relative overflow-hidden h-[15px]">
+                <div className="text-roll-current">
                   <span>MERAJ</span>
                 </div>
                 <div
-                  className="absolute top-0 left-0 motion-transition-transform translate-y-full group-hover:translate-y-0"
+                  className="text-roll-next absolute top-0 left-0"
                   style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
                 >
                   <span>MERAJ</span>
@@ -267,12 +267,12 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
               style={{ transitionDelay: '220ms' }}
             >
-              <div className="relative overflow-hidden h-[15px]">
-                <div className="motion-transition-transform group-hover:-translate-y-full">
+              <div className="text-roll-window relative overflow-hidden h-[15px]">
+                <div className="text-roll-current">
                   <span>HOSSAIN</span>
                 </div>
                 <div
-                  className="absolute top-0 left-0 motion-transition-transform translate-y-full group-hover:translate-y-0"
+                  className="text-roll-next absolute top-0 left-0"
                   style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
                 >
                   <span>HOSSAIN</span>
@@ -350,13 +350,13 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right: Stacked MENU / CONTACT & Architectural Reference Clock Widget */}
         <div
-          className={`absolute inset-0 motion-transition-opacity ${
+          className={`pointer-events-none absolute inset-0 motion-transition-opacity ${
             isMenuOpen ? 'pointer-events-none opacity-0' : 'opacity-100'
           }`}
         >
           {/* Stacked MENU / CONTACT with Bottom-to-Top Text Reveal & Rolling Hover Animation */}
           <nav
-            className="absolute left-[56.6%] top-[-9px] flex flex-col font-sans text-[12px] font-normal tracking-[0.14em] uppercase leading-[1.3] transition-colors duration-500"
+            className="pointer-events-auto absolute left-[56.6%] top-[-9px] flex flex-col font-sans text-[12px] font-normal tracking-[0.14em] uppercase leading-[1.3] transition-colors duration-500"
             style={{ color: navTextColor }}
           >
             <div className="overflow-hidden">
@@ -370,12 +370,12 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={onToggleMenu || onOpenMenu}
                   className="group/menu relative block cursor-pointer text-left select-none"
                 >
-                  <div className="relative overflow-hidden h-[16px]">
-                    <div className="motion-transition-transform group-hover/menu:-translate-y-full">
+                  <div className="text-roll-window relative overflow-hidden h-[16px]">
+                    <div className="text-roll-current">
                       <span>{isMenuOpen ? 'CLOSE ✕' : 'MENU'}</span>
                     </div>
                     <div
-                      className="absolute top-0 left-0 motion-transition-transform translate-y-full group-hover/menu:translate-y-0"
+                      className="text-roll-next absolute top-0 left-0"
                       style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
                     >
                       <span>{isMenuOpen ? 'CLOSE ✕' : 'MENU'}</span>
@@ -396,12 +396,12 @@ export const Header: React.FC<HeaderProps> = ({
                     onClick={onOpenContact}
                     className="group/contact relative block cursor-pointer text-left select-none mt-[1px]"
                   >
-                    <div className="relative overflow-hidden h-[16px]">
-                      <div className="motion-transition-transform group-hover/contact:-translate-y-full">
+                    <div className="text-roll-window relative overflow-hidden h-[16px]">
+                      <div className="text-roll-current">
                         <span>CONTACT</span>
                       </div>
                       <div
-                        className="absolute top-0 left-0 motion-transition-transform translate-y-full group-hover/contact:translate-y-0"
+                        className="text-roll-next absolute top-0 left-0"
                         style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
                       >
                         <span>CONTACT</span>
@@ -414,7 +414,7 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
 
           {/* Minimalist Clock Widget: Exact match to Reference Images */}
-          <div className="absolute right-0 top-12 flex items-start gap-[5px] lg:top-px">
+          <div className="pointer-events-auto absolute right-0 top-12 flex items-start gap-[5px] lg:top-px">
             {/* Left of Dial: TIME TRAVEL ✕ and HH  .mm */}
             <div
               className="relative -top-3 flex flex-col items-end text-right font-sans text-[12px] font-normal tracking-[0.14em] uppercase leading-[1.3] transition-colors duration-500"

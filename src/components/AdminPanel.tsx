@@ -91,7 +91,7 @@ export default function AdminPanel() {
   const [isSaving, setIsSaving] = useState(false);
 
   const loadPortfolio = async () => {
-    const response = await fetch('/api/portfolio', { credentials: 'same-origin' });
+    const response = await fetch('/api/admin/portfolio', { credentials: 'same-origin' });
     const portfolio = await readJsonResponse(response);
     if (!response.ok || !isPortfolioData(portfolio)) {
       throw new Error('Could not load valid portfolio data.');

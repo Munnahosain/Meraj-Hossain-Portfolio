@@ -83,11 +83,33 @@ function requireAdmin(request: Request, response: Response, next: NextFunction) 
   next();
 }
 
+function hasAdminSession(request: Request) {
+  const token = getSessionToken(request);
+  const expiresAt = token ? sessions.get(token) : undefined;
+  if (!token || !expiresAt || expiresAt < Date.now()) {
+    if (token) sessions.delete(token);
+    return false;
+  }
+  return true;
+}
+
 const app = express();
 app.disable('x-powered-by');
 app.use(express.json({ limit: '8mb' }));
 
-app.get('/api/portfolio', (_request, response) => {
+app.get('/api/portfolio', (request, response) => {
+  const previewMode = request.query.preview === 'true' && hasAdminSession(request);
+  response.json(
+    previewMode
+      ? portfolioData
+      : {
+          ...portfolioData,
+          caseStudies: portfolioData.caseStudies.filter((item) => item.status !== 'draft'),
+        },
+  );
+});
+
+app.get('/api/admin/portfolio', requireAdmin, (_request, response) => {
   response.json(portfolioData);
 });
 
