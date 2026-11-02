@@ -23,6 +23,4 @@ Run `npm run build`, then start the Node server with `npm start`. Configure `ADM
 
 The Render Blueprint in `render.yaml` deploys the complete app (static site, Express API, Admin Panel) with a persistent disk mounted at `/var/data`. It seeds the disk with the checked-in portfolio data on first startup. Render requires a paid web-service plan to attach a persistent disk. Set the prompted admin credentials; configure the R2 values too if Admin media uploads should be enabled.
 
-Netlify uses `netlify.toml` to publish Vite's `dist` output for static previews and route project URLs to the SPA. That static preview does not run the Express API or support Admin edits; use the Node deployment for the complete production app.
-
 `PORTFOLIO_DATA_DIR` optionally selects the writable directory for `portfolio.json` and `media.json`; it defaults to the repository's `data` directory. MongoDB is not currently used by this Vite/Express portfolio app.
