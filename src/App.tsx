@@ -420,107 +420,36 @@ export default function App() {
     (progress) => windowSize.height + (cardHeight - windowSize.height) * progress,
   );
 
-  // Horizontal Negative Magnetic Counter + Continuous Smooth Edge-Hold Auto-Scroll:
-  // - Moves strictly left/right (zero vertical floating)
-  // - Normal mouse movement: negative magnetic counter (mouse right = cards left, mouse left = cards right)
-  // - Holding mouse on right side: continuously and smoothly scrolls the 3 cards to the left
-  // - Holding mouse on left side: continuously and smoothly scrolls the 3 cards to the right
+  // Horizontal negative magnetic counter: mouse right = cards left, mouse left = cards right.
   const totalDeckX = useMotionValue(0);
   const smoothDeckX = useSpring(totalDeckX, { stiffness: 280, damping: 22, mass: 0.4 });
   const deckRepelX = useTransform([smoothDeckX, menuProgress], ([x, p]) => (x as number) * (p as number));
 
-  const accumulatedScrollRef = useRef(0);
-  const mouseNormXRef = useRef(0);
-
   useEffect(() => {
     if (!isMenuOpen) {
-      accumulatedScrollRef.current = 0;
-      mouseNormXRef.current = 0;
       totalDeckX.set(0);
       return;
     }
 
-    let rafId: number;
-    let lastTime = performance.now();
-
-    // Safe travel limits so all 3 cards stay clearly visible on screen ("screen er baire jabe na")
-    // Prevents cards from scrolling off-screen where "just last er card dekkha jay"
-    const maxTravel = isDesktop
-      ? Math.min(220, Math.max(100, Math.floor(windowSize.width * 0.13)))
-      : Math.floor(cardWidth * 1.1);
-
-    const minLimit = -maxTravel;
-    const maxLimit = maxTravel;
-
-    const loop = (time: number) => {
-      const dt = Math.min(32, time - lastTime) / 16.667;
-      lastTime = time;
-
-      const normX = mouseNormXRef.current; // -1 to +1
-      const absNormX = Math.abs(normX);
-      const SCROLL_THRESHOLD = 0.28;
-
-      // 1. Continuous smooth auto-scroll when mouse is held on left or right sides:
-      if (absNormX > SCROLL_THRESHOLD) {
-        // Holding on right (normX > 0) -> scrolls cards to left (- direction, "dan theke bame")
-        // Holding on left (normX < 0) -> scrolls cards to right (+ direction, "bam theke dane")
-        const direction = normX > 0 ? -1 : 1;
-        const intensity = (absNormX - SCROLL_THRESHOLD) / (1 - SCROLL_THRESHOLD);
-        // Snappy, realistic continuous scroll speed:
-        const speed = direction * intensity * (isDesktop ? 4.8 : 3.6) * dt;
-        accumulatedScrollRef.current += speed;
-      }
-
-      // 2. Elastic bounce & rubber-band boundary clamping:
-      // "screen er baire jabe na jodi o jay bounce e effect er moto fire asbe"
-      let displayScroll = accumulatedScrollRef.current;
-
-      if (accumulatedScrollRef.current < minLimit) {
-        const overshoot = minLimit - accumulatedScrollRef.current;
-        // Snappy elastic bounce spring pulling back into safe bounds ("bounce e effect er moto fire asbe")
-        accumulatedScrollRef.current += overshoot * 0.32 * dt;
-        // Visual rubber-band resistance curve (soft clamp to max 30px overshoot)
-        displayScroll = minLimit - Math.min(30, Math.pow(overshoot, 0.7) * 2.8);
-      } else if (accumulatedScrollRef.current > maxLimit) {
-        const overshoot = accumulatedScrollRef.current - maxLimit;
-        // Snappy elastic bounce spring pulling back into safe bounds
-        accumulatedScrollRef.current -= overshoot * 0.32 * dt;
-        // Visual rubber-band resistance curve
-        displayScroll = maxLimit + Math.min(30, Math.pow(overshoot, 0.7) * 2.8);
-      }
-
-      // 3. Instant negative magnetic counter repulsion:
-      const MAGNETIC_STRENGTH = isDesktop ? 54 : 32;
-      const magneticOffset = -normX * MAGNETIC_STRENGTH;
-
-      // Combined position: bounded scroll with elastic bounce + immediate negative magnetic offset
-      totalDeckX.set(displayScroll + magneticOffset);
-
-      rafId = requestAnimationFrame(loop);
-    };
-
-    lastTime = performance.now();
-    rafId = requestAnimationFrame(loop);
-
     const handleMouseMove = (e: MouseEvent) => {
       const centerX = windowSize.width / 2;
-      const norm = Math.max(-1, Math.min(1, (e.clientX - centerX) / (windowSize.width / 2)));
-      mouseNormXRef.current = norm;
+      const normX = Math.max(-1, Math.min(1, (e.clientX - centerX) / centerX));
+      const MAGNETIC_STRENGTH = isDesktop ? 54 : 32;
+      totalDeckX.set(-normX * MAGNETIC_STRENGTH);
     };
 
     const handleMouseLeave = () => {
-      mouseNormXRef.current = 0;
+      totalDeckX.set(0);
     };
 
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
     document.addEventListener('mouseleave', handleMouseLeave);
 
     return () => {
-      cancelAnimationFrame(rafId);
       window.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [isMenuOpen, isDesktop, windowSize.width, cardWidth, gap, totalDeckX]);
+  }, [isMenuOpen, isDesktop, windowSize.width, totalDeckX]);
 
   // Active theme / menu colors
   const activeBg = isMenuOpen ? FIXED_MENU_DARK_GREEN : theme.bg;
@@ -602,7 +531,7 @@ export default function App() {
         className={`fixed ${
           isMenuOpen
             ? 'group cursor-pointer select-none overflow-hidden no-scrollbar'
-            : view === 'home' || view === 'case-detail'
+            : view === 'home' || view === 'case-detail' || view === 'archive'
             ? 'overflow-hidden no-scrollbar'
             : 'overflow-y-auto no-scrollbar'
         }`}
