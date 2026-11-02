@@ -6,9 +6,22 @@ import { fileURLToPath } from 'node:url';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { ARCHIVE_ITEMS, CASE_STUDIES, MERAJ_PROFILE } from '../src/data/portfolioData';
 import type { PortfolioData } from '../src/types';
+import {
+  deleteMediaFromR2,
+  getMediaUploadLimit,
+  R2StorageError,
+  uploadMediaToR2,
+  validateMediaUpload,
+} from './utils/r2';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const dataFile = path.join(rootDir, 'data', 'portfolio.json');
+const seedDataDir = path.join(rootDir, 'data');
+const dataDir = process.env.PORTFOLIO_DATA_DIR
+  ? path.resolve(rootDir, process.env.PORTFOLIO_DATA_DIR)
+  : seedDataDir;
+const dataFile = path.join(dataDir, 'portfolio.json');
+const mediaFile = path.join(dataDir, 'media.json');
+const seedPortfolioFile = path.join(seedDataDir, 'portfolio.json');
 const distDir = path.join(rootDir, 'dist');
 const defaultData: PortfolioData = {
   profile: MERAJ_PROFILE,
@@ -19,11 +32,56 @@ const sessions = new Map<string, number>();
 const sessionLifetimeMs = 8 * 60 * 60 * 1000;
 const sessionCookie = 'portfolio_admin_session';
 
+function isMissingFile(error: unknown) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === 'ENOENT'
+  );
+}
+
+interface StoredMedia {
+  id: string;
+  fileName: string;
+  url: string;
+  storageKey: string;
+  type: 'image' | 'video';
+  mimeType: string;
+  size: number;
+  createdAt: string;
+}
+
 let portfolioData: PortfolioData = defaultData;
+let mediaItems: StoredMedia[] = [];
 try {
   portfolioData = JSON.parse(await readFile(dataFile, 'utf8')) as PortfolioData;
-} catch {
-  // Source data remains available until the first admin save.
+} catch (error) {
+  if (!isMissingFile(error)) throw error;
+
+  if (dataFile !== seedPortfolioFile) {
+    try {
+      portfolioData = JSON.parse(await readFile(seedPortfolioFile, 'utf8')) as PortfolioData;
+      await mkdir(dataDir, { recursive: true });
+      await writeFile(dataFile, `${JSON.stringify(portfolioData, null, 2)}\n`, 'utf8');
+    } catch (seedError) {
+      if (!isMissingFile(seedError)) throw seedError;
+    }
+  }
+}
+
+try {
+  const savedMedia = JSON.parse(await readFile(mediaFile, 'utf8')) as unknown;
+  if (!Array.isArray(savedMedia)) throw new Error('Media library data must be an array.');
+  mediaItems = savedMedia as StoredMedia[];
+} catch (error) {
+  if (!isMissingFile(error)) throw error;
+}
+
+async function saveMediaItems(items: StoredMedia[]) {
+  await mkdir(path.dirname(mediaFile), { recursive: true });
+  await writeFile(mediaFile, `${JSON.stringify(items, null, 2)}\n`, 'utf8');
+  mediaItems = items;
 }
 
 function safeEqual(left: string, right: string) {
@@ -49,11 +107,33 @@ function requireAdmin(request: Request, response: Response, next: NextFunction) 
   next();
 }
 
+function hasAdminSession(request: Request) {
+  const token = getSessionToken(request);
+  const expiresAt = token ? sessions.get(token) : undefined;
+  if (!token || !expiresAt || expiresAt < Date.now()) {
+    if (token) sessions.delete(token);
+    return false;
+  }
+  return true;
+}
+
 const app = express();
 app.disable('x-powered-by');
 app.use(express.json({ limit: '8mb' }));
 
-app.get('/api/portfolio', (_request, response) => {
+app.get('/api/portfolio', (request, response) => {
+  const previewMode = request.query.preview === 'true' && hasAdminSession(request);
+  response.json(
+    previewMode
+      ? portfolioData
+      : {
+          ...portfolioData,
+          caseStudies: portfolioData.caseStudies.filter((item) => item.status !== 'draft'),
+        },
+  );
+});
+
+app.get('/api/admin/portfolio', requireAdmin, (_request, response) => {
   response.json(portfolioData);
 });
 
@@ -118,6 +198,115 @@ app.put('/api/admin/portfolio', requireAdmin, async (request, response) => {
     response.json({ saved: true });
   } catch {
     response.status(500).json({ error: 'Could not save portfolio data.' });
+  }
+});
+
+app.get('/api/admin/media', requireAdmin, (_request, response) => {
+  response.json({ media: mediaItems });
+});
+
+app.post(
+  '/api/admin/media',
+  requireAdmin,
+  express.raw({
+    type: '*/*',
+    limit: Number(process.env.R2_MAX_UPLOAD_BYTES) || 100 * 1024 * 1024,
+  }),
+  async (request, response) => {
+    const mimeType = request.headers['content-type']?.split(';')[0]?.trim() || '';
+    const buffer = request.body;
+    try {
+      if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
+        response.status(400).json({ error: 'Choose a non-empty image or video file.' });
+        return;
+      }
+
+      const maxSize = getMediaUploadLimit();
+      if (buffer.length > maxSize) {
+        response.status(413).json({
+          error: `File exceeds the ${(maxSize / (1024 * 1024)).toFixed(1)} MB upload limit.`,
+        });
+        return;
+      }
+
+      const validated = validateMediaUpload(mimeType, buffer);
+      const uploaded = await uploadMediaToR2(
+        buffer,
+        validated.mimeType,
+        validated.extension,
+      );
+      const fileName = String(request.query.name || 'upload')
+        .replace(/[\\/]/g, '_')
+        .replace(/[\u0000-\u001f\u007f]/g, '')
+        .slice(0, 180) || 'upload';
+      const newMedia: StoredMedia = {
+        id: randomBytes(16).toString('hex'),
+        fileName,
+        url: uploaded.url,
+        storageKey: uploaded.key,
+        type: validated.type,
+        mimeType: validated.mimeType,
+        size: buffer.length,
+        createdAt: new Date().toISOString(),
+      };
+
+      try {
+        await saveMediaItems([newMedia, ...mediaItems]);
+      } catch (error) {
+        await deleteMediaFromR2(uploaded.key);
+        throw error;
+      }
+
+      response.status(201).json({ media: newMedia });
+    } catch (error) {
+      if (error instanceof R2StorageError) {
+        response.status(error.status).json({ error: error.message });
+        return;
+      }
+      console.error('Media upload failed:', error);
+      response.status(500).json({ error: 'Could not save uploaded media.' });
+    }
+  },
+);
+
+app.use('/api/admin/media', (
+  error: unknown,
+  _request: Request,
+  response: Response,
+  next: NextFunction,
+) => {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'type' in error &&
+    error.type === 'entity.too.large'
+  ) {
+    response.status(413).json({
+      error: `File exceeds the ${(getMediaUploadLimit() / (1024 * 1024)).toFixed(1)} MB upload limit.`,
+    });
+    return;
+  }
+  next(error);
+});
+
+app.delete('/api/admin/media/:id', requireAdmin, async (request, response) => {
+  const media = mediaItems.find((item) => item.id === request.params.id);
+  if (!media) {
+    response.status(404).json({ error: 'Media item not found.' });
+    return;
+  }
+
+  try {
+    await deleteMediaFromR2(media.storageKey);
+    await saveMediaItems(mediaItems.filter((item) => item.id !== media.id));
+    response.json({ deleted: true });
+  } catch (error) {
+    if (error instanceof R2StorageError) {
+      response.status(error.status).json({ error: error.message });
+      return;
+    }
+    console.error('Media record deletion failed:', error);
+    response.status(500).json({ error: 'The file was removed from R2, but its media record could not be saved.' });
   }
 });
 

@@ -1,20 +1,39 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ARCHIVE_ITEMS } from '../data/portfolioData';
 import { ArchiveItem, TimeTheme } from '../types';
-import { Grid, Columns, X, Maximize2 } from 'lucide-react';
+import { X, Maximize2 } from 'lucide-react';
+import {
+  MotionButton,
+  MotionCard,
+  MotionModalBackdrop,
+  MotionModalContent,
+} from './motion/MotionPrimitives';
+import { motionTokens } from '../lib/motion';
 
 interface ArchiveViewProps {
   theme: TimeTheme;
   items?: ArchiveItem[];
 }
 
+const ARCHIVE_BACKGROUND = '#e5e2da';
+const ARCHIVE_FOREGROUND = '#171717';
+
 export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE_ITEMS }) => {
   const [activeItem, setActiveItem] = useState<ArchiveItem | null>(null);
   const [hoveredItem, setHoveredItem] = useState<ArchiveItem | null>(null);
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
-  const [viewMode, setViewMode] = useState<'horizontal' | 'grid'>('horizontal');
+  const [mediaRatios, setMediaRatios] = useState<Record<string, number>>({});
+  const [viewportHeight, setViewportHeight] = useState(900);
+  const rootRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const cardHeight = Math.max(240, Math.min(viewportHeight * 0.43, 680));
+
+  const setMediaRatio = (id: string, width: number, height: number) => {
+    if (!width || !height) return;
+    setMediaRatios((current) => ({ ...current, [id]: width / height }));
+  };
 
   // Track mouse coordinates for floating preview card
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -32,169 +51,160 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE
     return () => window.removeEventListener('keydown', onKey);
   }, [activeItem]);
 
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      const strip = scrollRef.current;
+      if (!strip || strip.scrollWidth <= strip.clientWidth) return;
+
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (delta === 0) return;
+
+      e.preventDefault();
+      strip.scrollLeft += delta;
+    };
+
+    root.addEventListener('wheel', handleWheel, { passive: false });
+    return () => root.removeEventListener('wheel', handleWheel);
+  }, []);
+
+  useEffect(() => {
+    const updateViewportHeight = () => setViewportHeight(window.innerHeight);
+    updateViewportHeight();
+    window.addEventListener('resize', updateViewportHeight);
+    return () => window.removeEventListener('resize', updateViewportHeight);
+  }, []);
+
   return (
     <div
+      ref={rootRef}
       onMouseMove={handleMouseMove}
-      className="relative w-full min-h-screen pt-28 sm:pt-36 pb-20 transition-colors duration-700 overflow-x-hidden"
+      className="relative h-full min-h-0 w-full overflow-hidden px-5 pb-[3vh] pt-28 transition-colors duration-700 sm:pt-[clamp(10rem,18vh,16rem)]"
       style={{
-        backgroundColor: theme.bg,
-        color: theme.text,
+        backgroundColor: ARCHIVE_BACKGROUND,
+        color: ARCHIVE_FOREGROUND,
       }}
     >
-      <div className="max-w-[1720px] mx-auto px-6 sm:px-12">
+      <div className="flex h-full w-full flex-col">
         {/* Archive Title Bar */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-12 border-b border-[#18C98A]/15">
+        <div className="grid shrink-0 grid-cols-1 items-center gap-6 md:grid-cols-[56.6%_1fr]">
           <div>
             <h1
-              className="text-6xl sm:text-8xl font-sans font-light tracking-tight leading-none transition-colors duration-500"
-              style={{ color: theme.text }}
+              className="font-sans text-[clamp(7rem,6.5vw,14rem)] font-light leading-[0.82] tracking-[-0.05em] transition-colors duration-500"
+              style={{ color: ARCHIVE_FOREGROUND }}
             >
               archive
             </h1>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-end gap-6 sm:gap-12">
-            <div className="font-mono text-[11px] tracking-widest uppercase leading-relaxed text-[#8e9693]">
+          <div className="flex flex-col items-start">
+            <div
+              className="font-sans text-base tracking-[0.04em] uppercase leading-[1.2]"
+              style={{ color: ARCHIVE_FOREGROUND }}
+            >
               A curated selection<br />
               of motion & visual explorations<br />
-              <span className="text-[#18C98A]">2016—2026</span>
-            </div>
-
-            {/* Layout Mode Switcher */}
-            <div className="flex items-center gap-1 p-1 rounded border border-[#18C98A]/20 bg-[#16181e] backdrop-blur-sm self-start sm:self-auto">
-              <button
-                onClick={() => setViewMode('horizontal')}
-                className={`p-1.5 rounded transition-colors cursor-pointer ${
-                  viewMode === 'horizontal'
-                    ? 'bg-[#18C98A] text-[#101114]'
-                    : 'text-[#8e9693] hover:text-[#f2f4f3]'
-                }`}
-                title="Filmstrip View"
-              >
-                <Columns className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded transition-colors cursor-pointer ${
-                  viewMode === 'grid'
-                    ? 'bg-[#18C98A] text-[#101114]'
-                    : 'text-[#8e9693] hover:text-[#f2f4f3]'
-                }`}
-                title="Grid View"
-              >
-                <Grid className="w-4 h-4" />
-              </button>
+              <span>2016—2026</span>
             </div>
           </div>
         </div>
 
         {/* Gallery Content */}
-        {viewMode === 'horizontal' ? (
-          <div
-            ref={scrollRef}
-            className="w-full overflow-x-auto no-scrollbar flex gap-6 sm:gap-8 py-12 select-none"
-          >
+        <div
+          ref={scrollRef}
+          tabIndex={0}
+          aria-label="Archive projects. Scroll horizontally to explore."
+          className="mt-[clamp(11rem,35vh,23.5rem)] flex w-full shrink-0 select-none gap-[9px] overflow-x-auto overscroll-x-contain py-3 no-scrollbar focus-visible:outline focus-visible:outline-1"
+          style={{ outlineColor: theme.accent }}
+        >
             {items.map((item, index) => (
-              <motion.div
+              <MotionCard
                 key={item.id}
                 onClick={() => setActiveItem(item)}
                 onMouseEnter={() => setHoveredItem(item)}
                 onMouseLeave={() => setHoveredItem(null)}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.55, delay: Math.min(index * 0.035, 0.28), ease: [0.76, 0, 0.24, 1] }}
-                className="group flex-shrink-0 w-[75vw] sm:w-[42vw] md:w-[32vw] lg:w-[24vw] max-w-[400px] flex flex-col justify-between cursor-pointer transition-transform duration-500 hover:-translate-y-2"
+                delay={Math.min(index * motionTokens.stagger.tight, motionTokens.stagger.maximum)}
+                inView
+                once
+                amount={0.2}
+                lift={8}
+                className="group flex flex-shrink-0 cursor-pointer flex-col justify-between"
+                style={{
+                  width: `${Math.round(cardHeight * (mediaRatios[item.id] || 0.8))}px`,
+                }}
               >
-                <div className="relative w-full h-[380px] sm:h-[460px] overflow-hidden rounded-none bg-[#16181e] border border-[#18C98A]/15 group-hover:border-[#18C98A]/40 shadow-none">
+                <div
+                  className="relative w-full overflow-hidden border shadow-none"
+                  style={{
+                    height: `${cardHeight}px`,
+                    backgroundColor: ARCHIVE_BACKGROUND,
+                    borderColor: `${ARCHIVE_FOREGROUND}1a`,
+                  }}
+                >
                   {item.type === 'video' ? (
-                    <video
+                    <motion.video
+                      layoutId={`archive-media-${item.id}`}
                       src={item.src}
                       poster={item.poster}
                       autoPlay
                       loop
                       muted
                       playsInline
-                      className="w-full h-full object-cover"
+                      onLoadedMetadata={(event) =>
+                        setMediaRatio(item.id, event.currentTarget.videoWidth, event.currentTarget.videoHeight)
+                      }
+                      className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                     />
                   ) : (
-                    <img
+                    <motion.img
+                      layoutId={`archive-media-${item.id}`}
                       src={item.src}
                       alt={item.title}
                       loading="lazy"
-                      className="w-full h-full object-cover"
+                      onLoad={(event) =>
+                        setMediaRatio(item.id, event.currentTarget.naturalWidth, event.currentTarget.naturalHeight)
+                      }
+                      className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                     />
                   )}
 
-                  <div className="absolute inset-0 bg-[#101114]/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <span className="p-3 rounded-full bg-[#101114]/80 border border-[#18C98A]/40 text-[#18C98A] backdrop-blur-md">
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 motion-transition-opacity flex items-center justify-center"
+                    style={{ backgroundColor: `${theme.bg}80` }}
+                  >
+                    <span
+                      className="p-3 rounded-full border backdrop-blur-md"
+                      style={{
+                        backgroundColor: `${theme.bg}cc`,
+                        borderColor: `${theme.accent}66`,
+                        color: theme.accent,
+                      }}
+                    >
                       <Maximize2 className="w-4 h-4" />
                     </span>
                   </div>
                 </div>
 
-                <div className="pt-3 flex items-center justify-between text-[11px] font-mono tracking-widest uppercase text-[#f2f4f3]">
-                  <span className="truncate pr-2 font-medium group-hover:text-[#18C98A] transition-colors">{item.title}</span>
-                  <span className="text-[#18C98A]">{item.number}</span>
+                <div
+                  className="pt-3 flex items-center justify-between text-[11px] font-mono tracking-widest uppercase"
+                style={{ color: ARCHIVE_FOREGROUND }}
+                >
+                  <span className="truncate pr-2 font-medium motion-transition-colors group-hover:text-[var(--primary)]">
+                    {item.title}
+                  </span>
+                  <span style={{ color: theme.accent }}>{item.number}</span>
                 </div>
-                <div className="text-[10px] font-mono tracking-wider text-[#8e9693] uppercase truncate">
+                <div
+                  className="text-[10px] font-mono tracking-wider uppercase truncate"
+                  style={{ color: theme.textMuted }}
+                >
                   {item.category} · {item.year}
                 </div>
-              </motion.div>
+              </MotionCard>
             ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8 py-12">
-            {items.map((item, index) => (
-              <motion.div
-                key={item.id}
-                onClick={() => setActiveItem(item)}
-                onMouseEnter={() => setHoveredItem(item)}
-                onMouseLeave={() => setHoveredItem(null)}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.55, delay: Math.min(index * 0.035, 0.28), ease: [0.76, 0, 0.24, 1] }}
-                className="group flex flex-col justify-between cursor-pointer transition-transform duration-300 hover:-translate-y-1"
-              >
-                <div className="relative w-full h-[340px] overflow-hidden rounded-none bg-[#16181e] border border-[#18C98A]/15 group-hover:border-[#18C98A]/40 shadow-none">
-                  {item.type === 'video' ? (
-                    <video
-                      src={item.src}
-                      poster={item.poster}
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <img
-                      src={item.src}
-                      alt={item.title}
-                      loading="lazy"
-                      className="w-full h-full object-cover"
-                    />
-                  )}
-
-                  <div className="absolute inset-0 bg-[#101114]/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <span className="p-3 rounded-full bg-[#101114]/80 border border-[#18C98A]/40 text-[#18C98A] backdrop-blur-md">
-                      <Maximize2 className="w-4 h-4" />
-                    </span>
-                  </div>
-                </div>
-
-                <div className="pt-3 flex items-center justify-between text-[11px] font-mono tracking-widest uppercase text-[#f2f4f3]">
-                  <span className="truncate pr-2 font-medium group-hover:text-[#18C98A] transition-colors">{item.title}</span>
-                  <span className="text-[#18C98A]">{item.number}</span>
-                </div>
-                <div className="text-[10px] font-mono tracking-wider text-[#8e9693] uppercase truncate">
-                  {item.category} · {item.year}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Floating Cursor Media Preview on Desktop */}
@@ -210,9 +220,13 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE
             }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-            className="fixed top-0 left-0 pointer-events-none z-50 hidden xl:block w-48 overflow-hidden rounded border border-[#18C98A]/40 bg-[#101114]/90 backdrop-blur-md p-2 shadow-2xl"
+            className="fixed top-0 left-0 pointer-events-none z-50 hidden xl:block w-48 overflow-hidden border backdrop-blur-md p-2 shadow-2xl"
+            style={{
+              borderColor: `${theme.accent}66`,
+              backgroundColor: `${theme.bg}e6`,
+            }}
           >
-            <div className="w-full h-28 overflow-hidden rounded-sm bg-black/50 mb-2">
+            <div className="w-full h-28 overflow-hidden mb-2" style={{ backgroundColor: theme.surface }}>
               {hoveredItem.type === 'video' ? (
                 <video
                   src={hoveredItem.src}
@@ -231,10 +245,13 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE
                 />
               )}
             </div>
-            <div className="text-[10px] font-mono tracking-widest uppercase text-white truncate">
+            <div
+              className="text-[10px] font-mono tracking-widest uppercase truncate"
+              style={{ color: theme.text }}
+            >
               {hoveredItem.title}
             </div>
-            <div className="text-[9px] font-mono text-[#18C98A] uppercase">
+            <div className="text-[9px] font-mono uppercase" style={{ color: theme.accent }}>
               {hoveredItem.category}
             </div>
           </motion.div>
@@ -242,64 +259,84 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE
       </AnimatePresence>
 
       {/* Fullscreen Lightbox Modal */}
-      <AnimatePresence>
-        {activeItem && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8 bg-[#101114]/95 backdrop-blur-xl"
-            onClick={() => setActiveItem(null)}
-          >
-            <button
+      {createPortal(
+        <AnimatePresence>
+          {activeItem && (
+            <MotionModalBackdrop
+              className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-8 backdrop-blur-xl"
+              style={{ backgroundColor: `${theme.bg}f2` }}
               onClick={() => setActiveItem(null)}
-              className="absolute top-6 right-6 p-2 rounded-full border border-white/20 text-white/80 hover:text-white hover:border-[#18C98A] transition-colors cursor-pointer z-10"
-              title="Close (Esc)"
             >
-              <X className="w-5 h-5" />
-            </button>
+              <MotionButton
+                onClick={() => setActiveItem(null)}
+                className="absolute top-6 right-6 p-2 rounded-full border motion-transition-colors cursor-pointer z-10"
+                style={{
+                  borderColor: `${theme.text}33`,
+                  color: theme.text,
+                }}
+                title="Close (Esc)"
+              >
+                <X className="w-5 h-5" />
+              </MotionButton>
 
-            <motion.div
-              initial={{ scale: 0.95, y: 16 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 16 }}
-              transition={{ duration: 0.4, ease: [0.76, 0, 0.24, 1] }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative max-w-5xl w-full max-h-[85vh] flex flex-col overflow-hidden rounded border border-[#18C98A]/30 bg-[#16181e]"
-            >
-              <div className="w-full flex-1 overflow-hidden bg-black flex items-center justify-center">
-                {activeItem.type === 'video' ? (
-                  <video
-                    src={activeItem.src}
-                    poster={activeItem.poster}
-                    controls
-                    autoPlay
-                    loop
-                    playsInline
-                    className="max-h-[70vh] w-full object-contain"
-                  />
-                ) : (
-                  <img
-                    src={activeItem.src}
-                    alt={activeItem.title}
-                    className="max-h-[70vh] w-full object-contain"
-                  />
-                )}
-              </div>
+              <MotionModalContent
+                onClick={(e) => e.stopPropagation()}
+                className="relative max-w-5xl w-full max-h-[85vh] flex flex-col overflow-hidden border"
+                style={{
+                  borderColor: `${theme.accent}4d`,
+                  backgroundColor: theme.surface,
+                }}
+              >
+                <div className="w-full flex-1 overflow-hidden bg-black flex items-center justify-center">
+                  {activeItem.type === 'video' ? (
+                    <motion.video
+                      layoutId={`archive-media-${activeItem.id}`}
+                      src={activeItem.src}
+                      poster={activeItem.poster}
+                      controls
+                      autoPlay
+                      loop
+                      playsInline
+                      className="max-h-[70vh] w-full object-contain"
+                    />
+                  ) : (
+                    <motion.img
+                      layoutId={`archive-media-${activeItem.id}`}
+                      src={activeItem.src}
+                      alt={activeItem.title}
+                      className="max-h-[70vh] w-full object-contain"
+                    />
+                  )}
+                </div>
 
-              <div className="p-5 flex items-center justify-between border-t border-white/10 bg-[#121419]">
-                <div>
-                  <h3 className="text-lg font-sans text-white">{activeItem.title}</h3>
-                  <div className="text-[11px] font-mono tracking-widest uppercase text-[#8e9693]">
-                    {activeItem.category} · {activeItem.year}
+                <div
+                  className="p-5 flex items-center justify-between border-t"
+                  style={{
+                    borderColor: `${theme.text}1a`,
+                    backgroundColor: theme.bg,
+                  }}
+                >
+                  <div>
+                    <h3 className="text-lg font-sans" style={{ color: theme.text }}>
+                      {activeItem.title}
+                    </h3>
+                    <div
+                      className="text-[11px] font-mono tracking-widest uppercase"
+                      style={{ color: theme.textMuted }}
+                    >
+                      {activeItem.category} · {activeItem.year}
+                    </div>
+                  </div>
+                  <div className="font-mono text-sm" style={{ color: theme.accent }}>
+                    {activeItem.number}
                   </div>
                 </div>
-                <div className="font-mono text-sm text-[#18C98A]">{activeItem.number}</div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              </MotionModalContent>
+            </MotionModalBackdrop>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
     </div>
   );
 };

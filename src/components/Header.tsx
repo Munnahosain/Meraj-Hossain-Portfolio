@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, useTransform, type MotionValue } from 'framer-motion';
 import { MerajProfile, TimeTheme } from '../types';
+import { MotionButton } from './motion/MotionPrimitives';
 
 interface HeaderProps {
   persona: MerajProfile;
@@ -32,6 +33,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   persona,
+  activeView,
   onNavigate,
   onOpenMenu,
   onToggleMenu,
@@ -207,15 +209,20 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   // Name and signature strictly preserve hero section colors when docked as a card
-  const nameTextColor = theme.text;
-  const signatureStroke = theme.isLight
+  const isArchiveView = activeView === 'archive';
+  const nameTextColor = isArchiveView ? '#171717' : theme.text;
+  const signatureStroke = isArchiveView
+    ? '#171717'
+    : theme.isLight
     ? '#18C98A'
     : (theme.bg === '#101114' ? '#18C98A' : theme.text);
-  const navTextColor = isMenuOpen ? '#FFFFFF' : theme.text;
+  const navTextColor = isMenuOpen ? '#FFFFFF' : isArchiveView ? '#171717' : theme.text;
 
   const brandLeft = useTransform(menuProgress, (progress) => progress * menuFrameLeft);
   const brandTop = useTransform(menuProgress, (progress) => progress * menuFrameTop);
-  const signatureHomeLeft = (viewportWidth - 32) * 0.288;
+  const signatureHomeLeft = isArchiveView
+    ? viewportWidth * 0.288
+    : (viewportWidth - 32) * 0.288;
   const signatureMenuLeft = menuFrameLeft + menuFrameWidth - menuSignatureWidth - 32;
   const signatureLeft = useTransform(
     menuProgress,
@@ -225,7 +232,9 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-40 px-4 py-4 select-none bg-transparent ${
+      className={`fixed top-0 left-0 right-0 z-40 select-none bg-transparent ${
+        isArchiveView ? 'px-5 py-5' : 'px-4 py-4'
+      } ${
         isDraggingClock ? 'transition-none' : 'transition-colors duration-700'
       } pointer-events-auto`}
       style={{
@@ -235,7 +244,9 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="relative h-[52px] w-full flex items-start justify-between">
         {/* Left: 2-line Clean MERAJ / HOSSAIN with Bottom-to-Top Text Reveal & Rolling Hover Animation */}
         <motion.div
-          className="group absolute left-0 top-0 cursor-pointer font-sans text-[12px] font-normal tracking-[0.14em] uppercase leading-[1.2]"
+          className={`header-name-roll absolute left-0 top-0 cursor-pointer font-sans font-normal uppercase leading-[1.2] ${
+            isArchiveView ? 'text-sm tracking-[0.08em]' : 'text-[12px] tracking-[0.14em]'
+          }`}
           style={{ color: nameTextColor, left: brandLeft, top: brandTop, x: deckRepelX }}
           onClick={() => onNavigate('home')}
         >
@@ -246,12 +257,12 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
               style={{ transitionDelay: '120ms' }}
             >
-              <div className="relative overflow-hidden h-[15px]">
-                <div className="transition-transform duration-300 ease-out group-hover:-translate-y-full">
+              <div className={`text-roll-window relative overflow-hidden ${isArchiveView ? 'h-[18px]' : 'h-[15px]'}`}>
+                <div className="text-roll-current">
                   <span>MERAJ</span>
                 </div>
                 <div
-                  className="absolute top-0 left-0 transition-transform duration-300 ease-out translate-y-full group-hover:translate-y-0"
+                  className="text-roll-next absolute top-0 left-0"
                   style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
                 >
                   <span>MERAJ</span>
@@ -266,12 +277,12 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
               style={{ transitionDelay: '220ms' }}
             >
-              <div className="relative overflow-hidden h-[15px]">
-                <div className="transition-transform duration-300 ease-out group-hover:-translate-y-full">
+              <div className={`text-roll-window relative overflow-hidden ${isArchiveView ? 'h-[18px]' : 'h-[15px]'}`}>
+                <div className="text-roll-current">
                   <span>HOSSAIN</span>
                 </div>
                 <div
-                  className="absolute top-0 left-0 transition-transform duration-300 ease-out translate-y-full group-hover:translate-y-0"
+                  className="text-roll-next absolute top-0 left-0"
                   style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
                 >
                   <span>HOSSAIN</span>
@@ -290,12 +301,12 @@ export const Header: React.FC<HeaderProps> = ({
           title="Click to replay signature pen drawing"
         >
           <svg
-            width="101"
-            height="52"
+            width={isArchiveView ? 140 : 101}
+            height={isArchiveView ? 72 : 52}
             viewBox="0 0 102 52"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            className={`h-[39px] w-[76px] lg:h-[52px] lg:w-[101px] transition-all duration-500 transform-gpu ${
+            className={`${isArchiveView ? 'h-[62px] w-[120px] lg:h-[72px] lg:w-[140px]' : 'h-[39px] w-[76px] lg:h-[52px] lg:w-[101px]'} transition-all duration-500 transform-gpu ${
               signatureHovered
                 ? 'scale-110 drop-shadow-[0_0_12px_rgba(24,201,138,0.75)]'
                 : 'drop-shadow-[0_0_5px_rgba(24,201,138,0.35)]'
@@ -349,13 +360,17 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right: Stacked MENU / CONTACT & Architectural Reference Clock Widget */}
         <div
-          className={`absolute inset-0 transition-opacity duration-300 ${
+          className={`pointer-events-none absolute inset-0 motion-transition-opacity ${
             isMenuOpen ? 'pointer-events-none opacity-0' : 'opacity-100'
           }`}
         >
           {/* Stacked MENU / CONTACT with Bottom-to-Top Text Reveal & Rolling Hover Animation */}
           <nav
-            className="absolute left-[56.6%] top-[-9px] flex flex-col font-sans text-[12px] font-normal tracking-[0.14em] uppercase leading-[1.3] transition-colors duration-500"
+            className={`pointer-events-auto absolute top-[-9px] flex flex-col font-sans font-normal uppercase leading-[1.3] transition-colors duration-500 ${
+              isArchiveView
+                ? 'left-[56.6%] top-0 text-sm tracking-[0.08em]'
+                : 'left-[56.6%] text-[12px] tracking-[0.14em]'
+            }`}
             style={{ color: navTextColor }}
           >
             <div className="overflow-hidden">
@@ -365,22 +380,22 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
                 style={{ transitionDelay: '300ms' }}
               >
-                <button
+                <MotionButton
                   onClick={onToggleMenu || onOpenMenu}
                   className="group/menu relative block cursor-pointer text-left select-none"
                 >
-                  <div className="relative overflow-hidden h-[16px]">
-                    <div className="transition-transform duration-300 ease-out group-hover/menu:-translate-y-full">
+                  <div className={`text-roll-window relative overflow-hidden ${isArchiveView ? 'h-[18px]' : 'h-[16px]'}`}>
+                    <div className="text-roll-current">
                       <span>{isMenuOpen ? 'CLOSE ✕' : 'MENU'}</span>
                     </div>
                     <div
-                      className="absolute top-0 left-0 transition-transform duration-300 ease-out translate-y-full group-hover/menu:translate-y-0"
+                      className="text-roll-next absolute top-0 left-0"
                       style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
                     >
                       <span>{isMenuOpen ? 'CLOSE ✕' : 'MENU'}</span>
                     </div>
                   </div>
-                </button>
+                </MotionButton>
               </div>
             </div>
             {!isMenuOpen && (
@@ -391,32 +406,34 @@ export const Header: React.FC<HeaderProps> = ({
                   }`}
                   style={{ transitionDelay: '380ms' }}
                 >
-                  <button
+                  <MotionButton
                     onClick={onOpenContact}
                     className="group/contact relative block cursor-pointer text-left select-none mt-[1px]"
                   >
-                    <div className="relative overflow-hidden h-[16px]">
-                      <div className="transition-transform duration-300 ease-out group-hover/contact:-translate-y-full">
+                    <div className={`text-roll-window relative overflow-hidden ${isArchiveView ? 'h-[18px]' : 'h-[16px]'}`}>
+                      <div className="text-roll-current">
                         <span>CONTACT</span>
                       </div>
                       <div
-                        className="absolute top-0 left-0 transition-transform duration-300 ease-out translate-y-full group-hover/contact:translate-y-0"
+                        className="text-roll-next absolute top-0 left-0"
                         style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
                       >
                         <span>CONTACT</span>
                       </div>
                     </div>
-                  </button>
+                  </MotionButton>
                 </div>
               </div>
             )}
           </nav>
 
           {/* Minimalist Clock Widget: Exact match to Reference Images */}
-          <div className="absolute right-0 top-12 flex items-start gap-[5px] lg:top-px">
+          <div className={`pointer-events-auto absolute right-0 flex items-start gap-[5px] ${isArchiveView ? 'top-0' : 'top-12 lg:top-px'}`}>
             {/* Left of Dial: TIME TRAVEL ✕ and HH  .mm */}
             <div
-              className="relative -top-3 flex flex-col items-end text-right font-sans text-[12px] font-normal tracking-[0.14em] uppercase leading-[1.3] transition-colors duration-500"
+              className={`relative flex flex-col items-end text-right font-sans font-normal uppercase leading-[1.3] transition-colors duration-500 ${
+                isArchiveView ? 'text-sm tracking-[0.08em]' : '-top-3 text-[12px] tracking-[0.14em]'
+              }`}
               style={{ color: navTextColor }}
             >
               <div className="overflow-hidden">
@@ -427,20 +444,20 @@ export const Header: React.FC<HeaderProps> = ({
                   style={{ transitionDelay: '360ms' }}
                 >
                   {isTimeOffset ? (
-                    <button
+                    <MotionButton
                       onClick={onResetTime}
-                      className="hover:opacity-75 transition-opacity cursor-pointer text-[10px] sm:text-[11px] font-medium tracking-[0.14em] flex items-center gap-1.5"
+                      className="hover:opacity-75 motion-transition-opacity cursor-pointer text-[10px] sm:text-[11px] font-medium tracking-[0.14em] flex items-center gap-1.5"
                       style={{ color: navTextColor }}
                       title="Click ✕ to reset to Live Dhaka Time"
                     >
                       <span>TIME TRAVEL</span>
                       <span className="text-[12px] leading-none">✕</span>
-                    </button>
+                    </MotionButton>
                   ) : (
                     <span className="opacity-80 tracking-[0.14em]">LOCAL TIME</span>
                   )}
                 </div>
-              </div>
+                </div>
 
               <div className="overflow-hidden">
                 <div
@@ -449,14 +466,14 @@ export const Header: React.FC<HeaderProps> = ({
                   }`}
                   style={{ transitionDelay: '440ms' }}
                 >
-                  <button
+                  <MotionButton
                     onClick={handleQuickCycle}
-                    className="tabular-nums font-mono text-[11px] sm:text-[12px] hover:opacity-75 transition-opacity cursor-pointer block text-right"
+                    className="tabular-nums font-mono text-[11px] sm:text-[12px] hover:opacity-75 motion-transition-opacity cursor-pointer block text-right"
                     style={{ color: navTextColor }}
                     title="Click to cycle themes (Day → Evening Green → Night → Live)"
                   >
                     {displayTime}
-                  </button>
+                  </MotionButton>
                 </div>
               </div>
             </div>
@@ -471,7 +488,9 @@ export const Header: React.FC<HeaderProps> = ({
               <div
                 ref={dialRef}
                 onPointerDown={handlePointerDown}
-                className="group relative h-[48px] w-[48px] sm:h-[52px] sm:w-[52px] rounded-full border border-solid cursor-grab active:cursor-grabbing flex items-center justify-center select-none touch-none transition-transform duration-300 ease-out hover:scale-110 active:scale-105"
+                className={`group relative rounded-full border border-solid cursor-grab active:cursor-grabbing flex items-center justify-center select-none touch-none motion-transition-transform hover:scale-110 active:scale-105 ${
+                  isArchiveView ? 'h-[52px] w-[52px] sm:h-[60px] sm:w-[60px]' : 'h-[48px] w-[48px] sm:h-[52px] sm:w-[52px]'
+                }`}
                 style={{
                   borderColor: navTextColor,
                   backgroundColor: 'transparent',
@@ -489,7 +508,7 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   {/* Inner Circle: Clean hollow circular ring */}
                   <div
-                    className="w-[8px] h-[8px] sm:w-[9px] sm:h-[9px] rounded-full mt-[4px] border-[1.5px] border-solid bg-transparent transition-colors duration-300"
+                    className="w-[8px] h-[8px] sm:w-[9px] sm:h-[9px] rounded-full mt-[4px] border-[1.5px] border-solid bg-transparent motion-transition-colors"
                     style={{
                       borderColor: navTextColor,
                     }}

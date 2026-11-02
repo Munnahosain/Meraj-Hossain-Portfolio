@@ -14,6 +14,13 @@ export interface CaseStudy {
   description: string;
   challenge?: string;
   outcome?: string;
+  featured?: boolean;
+  heroVisible?: boolean;
+  status?: 'draft' | 'published';
+  services?: string[];
+  tools?: string[];
+  sections?: ProjectSection[];
+  animationSettings?: ProjectAnimationSettings;
   heroAspect?: string;
   contentMedia: {
     type: 'image' | 'video';
@@ -23,6 +30,46 @@ export interface CaseStudy {
   }[];
   scrollGalleryRow1?: string[];
   scrollGalleryRow2?: string[];
+}
+
+export type ProjectSectionLayout =
+  | 'image-left'
+  | 'image-right'
+  | 'full-width'
+  | 'sticky-story'
+  | 'cinematic-gallery';
+
+export interface ProjectSection {
+  id?: string;
+  layout: ProjectSectionLayout;
+  heading?: string;
+  body?: string;
+  image?: string;
+  imageAlt?: string;
+  caption?: string;
+  galleryImages?: string[];
+  galleryCaptions?: string[];
+  galleryAltTexts?: string[];
+  textAlignment?: 'left' | 'center' | 'right';
+  imagePosition?: 'left' | 'right';
+  imageSize?: 'compact' | 'standard' | 'immersive';
+  backgroundTreatment?: 'none' | 'panel' | 'accent';
+  spacing?: 'compact' | 'comfortable' | 'spacious';
+  stickyEnabled?: boolean;
+  animationPreset?: 'cinematic' | 'smooth' | 'minimal' | 'reduced-motion';
+  ctaLabel?: string;
+  ctaUrl?: string;
+}
+
+export interface ProjectAnimationSettings {
+  preset?: 'cinematic' | 'smooth' | 'minimal' | 'reduced-motion';
+  transitionDurationMs?: number;
+  easingPreset?: 'cinematic' | 'smooth' | 'minimal';
+  shutterDirection?: 'upward';
+  imageTransitionStyle?: 'shutter';
+  textRevealStyle?: 'rise' | 'fade' | 'none';
+  stickyImageBehavior?: 'enabled' | 'disabled';
+  reducedMotionFallback?: 'instant' | 'fade';
 }
 
 export interface ArchiveItem {
@@ -105,4 +152,3 @@ export interface TimeTheme {
   isLight: boolean;
   isGreen?: boolean;
 }
-
