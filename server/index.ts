@@ -15,8 +15,13 @@ import {
 } from './utils/r2';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const dataFile = path.join(rootDir, 'data', 'portfolio.json');
-const mediaFile = path.join(rootDir, 'data', 'media.json');
+const seedDataDir = path.join(rootDir, 'data');
+const dataDir = process.env.PORTFOLIO_DATA_DIR
+  ? path.resolve(rootDir, process.env.PORTFOLIO_DATA_DIR)
+  : seedDataDir;
+const dataFile = path.join(dataDir, 'portfolio.json');
+const mediaFile = path.join(dataDir, 'media.json');
+const seedPortfolioFile = path.join(seedDataDir, 'portfolio.json');
 const distDir = path.join(rootDir, 'dist');
 const defaultData: PortfolioData = {
   profile: MERAJ_PROFILE,
@@ -26,6 +31,15 @@ const defaultData: PortfolioData = {
 const sessions = new Map<string, number>();
 const sessionLifetimeMs = 8 * 60 * 60 * 1000;
 const sessionCookie = 'portfolio_admin_session';
+
+function isMissingFile(error: unknown) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === 'ENOENT'
+  );
+}
 
 interface StoredMedia {
   id: string;
@@ -42,8 +56,18 @@ let portfolioData: PortfolioData = defaultData;
 let mediaItems: StoredMedia[] = [];
 try {
   portfolioData = JSON.parse(await readFile(dataFile, 'utf8')) as PortfolioData;
-} catch {
-  // Source data remains available until the first admin save.
+} catch (error) {
+  if (!isMissingFile(error)) throw error;
+
+  if (dataFile !== seedPortfolioFile) {
+    try {
+      portfolioData = JSON.parse(await readFile(seedPortfolioFile, 'utf8')) as PortfolioData;
+      await mkdir(dataDir, { recursive: true });
+      await writeFile(dataFile, `${JSON.stringify(portfolioData, null, 2)}\n`, 'utf8');
+    } catch (seedError) {
+      if (!isMissingFile(seedError)) throw seedError;
+    }
+  }
 }
 
 try {
@@ -51,7 +75,7 @@ try {
   if (!Array.isArray(savedMedia)) throw new Error('Media library data must be an array.');
   mediaItems = savedMedia as StoredMedia[];
 } catch (error) {
-  if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
+  if (!isMissingFile(error)) throw error;
 }
 
 async function saveMediaItems(items: StoredMedia[]) {
