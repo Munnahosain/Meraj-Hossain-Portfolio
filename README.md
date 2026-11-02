@@ -19,6 +19,8 @@ Set `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME
 
 ## Production
 
-Run `npm run build`, then start the Node server with `npm start`. Configure `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `PORT` in the server environment. The host must support a persistent writable filesystem for `data/portfolio.json`; ephemeral serverless storage will not preserve admin edits across restarts or deployments.
+Run `npm run build`, then start the Node server with `npm start`. Configure `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `PORT` in the server environment. The host must support a persistent writable filesystem for the portfolio and media JSON files; ephemeral serverless storage will not preserve admin edits across restarts or deployments.
 
-The portfolio content and media index use local JSON persistence. Use a host with persistent writable storage; ephemeral serverless storage will not preserve admin changes. MongoDB is not currently used by this Vite/Express portfolio app.
+The Render Blueprint in `render.yaml` deploys the complete app (static site, Express API, Admin Panel) with a persistent disk mounted at `/var/data`. It seeds the disk with the checked-in portfolio data on first startup. Render requires a paid web-service plan to attach a persistent disk. Set the prompted admin credentials; configure the R2 values too if Admin media uploads should be enabled.
+
+`PORTFOLIO_DATA_DIR` optionally selects the writable directory for `portfolio.json` and `media.json`; it defaults to the repository's `data` directory. MongoDB is not currently used by this Vite/Express portfolio app.
