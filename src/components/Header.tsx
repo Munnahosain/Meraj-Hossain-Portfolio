@@ -33,6 +33,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   persona,
+  activeView,
   onNavigate,
   onOpenMenu,
   onToggleMenu,
@@ -208,15 +209,20 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   // Name and signature strictly preserve hero section colors when docked as a card
-  const nameTextColor = theme.text;
-  const signatureStroke = theme.isLight
+  const isArchiveView = activeView === 'archive';
+  const nameTextColor = isArchiveView ? '#171717' : theme.text;
+  const signatureStroke = isArchiveView
+    ? '#171717'
+    : theme.isLight
     ? '#18C98A'
     : (theme.bg === '#101114' ? '#18C98A' : theme.text);
-  const navTextColor = isMenuOpen ? '#FFFFFF' : theme.text;
+  const navTextColor = isMenuOpen ? '#FFFFFF' : isArchiveView ? '#171717' : theme.text;
 
   const brandLeft = useTransform(menuProgress, (progress) => progress * menuFrameLeft);
   const brandTop = useTransform(menuProgress, (progress) => progress * menuFrameTop);
-  const signatureHomeLeft = (viewportWidth - 32) * 0.288;
+  const signatureHomeLeft = isArchiveView
+    ? viewportWidth * 0.288
+    : (viewportWidth - 32) * 0.288;
   const signatureMenuLeft = menuFrameLeft + menuFrameWidth - menuSignatureWidth - 32;
   const signatureLeft = useTransform(
     menuProgress,
@@ -226,7 +232,9 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-40 px-4 py-4 select-none bg-transparent ${
+      className={`fixed top-0 left-0 right-0 z-40 select-none bg-transparent ${
+        isArchiveView ? 'px-5 py-5' : 'px-4 py-4'
+      } ${
         isDraggingClock ? 'transition-none' : 'transition-colors duration-700'
       } pointer-events-auto`}
       style={{
@@ -236,7 +244,9 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="relative h-[52px] w-full flex items-start justify-between">
         {/* Left: 2-line Clean MERAJ / HOSSAIN with Bottom-to-Top Text Reveal & Rolling Hover Animation */}
         <motion.div
-          className="header-name-roll absolute left-0 top-0 cursor-pointer font-sans text-[12px] font-normal tracking-[0.14em] uppercase leading-[1.2]"
+          className={`header-name-roll absolute left-0 top-0 cursor-pointer font-sans font-normal uppercase leading-[1.2] ${
+            isArchiveView ? 'text-sm tracking-[0.08em]' : 'text-[12px] tracking-[0.14em]'
+          }`}
           style={{ color: nameTextColor, left: brandLeft, top: brandTop, x: deckRepelX }}
           onClick={() => onNavigate('home')}
         >
@@ -247,7 +257,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
               style={{ transitionDelay: '120ms' }}
             >
-              <div className="text-roll-window relative overflow-hidden h-[15px]">
+              <div className={`text-roll-window relative overflow-hidden ${isArchiveView ? 'h-[18px]' : 'h-[15px]'}`}>
                 <div className="text-roll-current">
                   <span>MERAJ</span>
                 </div>
@@ -267,7 +277,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
               style={{ transitionDelay: '220ms' }}
             >
-              <div className="text-roll-window relative overflow-hidden h-[15px]">
+              <div className={`text-roll-window relative overflow-hidden ${isArchiveView ? 'h-[18px]' : 'h-[15px]'}`}>
                 <div className="text-roll-current">
                   <span>HOSSAIN</span>
                 </div>
@@ -291,12 +301,12 @@ export const Header: React.FC<HeaderProps> = ({
           title="Click to replay signature pen drawing"
         >
           <svg
-            width="101"
-            height="52"
+            width={isArchiveView ? 140 : 101}
+            height={isArchiveView ? 72 : 52}
             viewBox="0 0 102 52"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            className={`h-[39px] w-[76px] lg:h-[52px] lg:w-[101px] transition-all duration-500 transform-gpu ${
+            className={`${isArchiveView ? 'h-[62px] w-[120px] lg:h-[72px] lg:w-[140px]' : 'h-[39px] w-[76px] lg:h-[52px] lg:w-[101px]'} transition-all duration-500 transform-gpu ${
               signatureHovered
                 ? 'scale-110 drop-shadow-[0_0_12px_rgba(24,201,138,0.75)]'
                 : 'drop-shadow-[0_0_5px_rgba(24,201,138,0.35)]'
@@ -356,7 +366,11 @@ export const Header: React.FC<HeaderProps> = ({
         >
           {/* Stacked MENU / CONTACT with Bottom-to-Top Text Reveal & Rolling Hover Animation */}
           <nav
-            className="pointer-events-auto absolute left-[56.6%] top-[-9px] flex flex-col font-sans text-[12px] font-normal tracking-[0.14em] uppercase leading-[1.3] transition-colors duration-500"
+            className={`pointer-events-auto absolute top-[-9px] flex flex-col font-sans font-normal uppercase leading-[1.3] transition-colors duration-500 ${
+              isArchiveView
+                ? 'left-[56.6%] top-0 text-sm tracking-[0.08em]'
+                : 'left-[56.6%] text-[12px] tracking-[0.14em]'
+            }`}
             style={{ color: navTextColor }}
           >
             <div className="overflow-hidden">
@@ -370,7 +384,7 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={onToggleMenu || onOpenMenu}
                   className="group/menu relative block cursor-pointer text-left select-none"
                 >
-                  <div className="text-roll-window relative overflow-hidden h-[16px]">
+                  <div className={`text-roll-window relative overflow-hidden ${isArchiveView ? 'h-[18px]' : 'h-[16px]'}`}>
                     <div className="text-roll-current">
                       <span>{isMenuOpen ? 'CLOSE ✕' : 'MENU'}</span>
                     </div>
@@ -396,7 +410,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onClick={onOpenContact}
                     className="group/contact relative block cursor-pointer text-left select-none mt-[1px]"
                   >
-                    <div className="text-roll-window relative overflow-hidden h-[16px]">
+                    <div className={`text-roll-window relative overflow-hidden ${isArchiveView ? 'h-[18px]' : 'h-[16px]'}`}>
                       <div className="text-roll-current">
                         <span>CONTACT</span>
                       </div>
@@ -414,10 +428,12 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
 
           {/* Minimalist Clock Widget: Exact match to Reference Images */}
-          <div className="pointer-events-auto absolute right-0 top-12 flex items-start gap-[5px] lg:top-px">
+          <div className={`pointer-events-auto absolute right-0 flex items-start gap-[5px] ${isArchiveView ? 'top-0' : 'top-12 lg:top-px'}`}>
             {/* Left of Dial: TIME TRAVEL ✕ and HH  .mm */}
             <div
-              className="relative -top-3 flex flex-col items-end text-right font-sans text-[12px] font-normal tracking-[0.14em] uppercase leading-[1.3] transition-colors duration-500"
+              className={`relative flex flex-col items-end text-right font-sans font-normal uppercase leading-[1.3] transition-colors duration-500 ${
+                isArchiveView ? 'text-sm tracking-[0.08em]' : '-top-3 text-[12px] tracking-[0.14em]'
+              }`}
               style={{ color: navTextColor }}
             >
               <div className="overflow-hidden">
@@ -441,7 +457,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <span className="opacity-80 tracking-[0.14em]">LOCAL TIME</span>
                   )}
                 </div>
-              </div>
+                </div>
 
               <div className="overflow-hidden">
                 <div
@@ -472,7 +488,9 @@ export const Header: React.FC<HeaderProps> = ({
               <div
                 ref={dialRef}
                 onPointerDown={handlePointerDown}
-                className="group relative h-[48px] w-[48px] sm:h-[52px] sm:w-[52px] rounded-full border border-solid cursor-grab active:cursor-grabbing flex items-center justify-center select-none touch-none motion-transition-transform hover:scale-110 active:scale-105"
+                className={`group relative rounded-full border border-solid cursor-grab active:cursor-grabbing flex items-center justify-center select-none touch-none motion-transition-transform hover:scale-110 active:scale-105 ${
+                  isArchiveView ? 'h-[52px] w-[52px] sm:h-[60px] sm:w-[60px]' : 'h-[48px] w-[48px] sm:h-[52px] sm:w-[52px]'
+                }`}
                 style={{
                   borderColor: navTextColor,
                   backgroundColor: 'transparent',

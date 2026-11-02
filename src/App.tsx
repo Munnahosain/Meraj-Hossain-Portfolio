@@ -627,7 +627,7 @@ export default function App() {
           <FadeUp
             key={view === 'case-detail' ? selectedCase?.id || view : view}
             className={`w-full ${
-              view === 'home'
+              view === 'home' || view === 'archive'
                 ? 'h-full overflow-hidden'
                 : view === 'case-detail'
                   ? 'h-full overflow-hidden'
