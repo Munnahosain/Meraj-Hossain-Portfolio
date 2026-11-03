@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ARCHIVE_ITEMS } from '../data/portfolioData';
 import { ArchiveItem, TimeTheme } from '../types';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX, X } from 'lucide-react';
+import { ProgressiveImage } from './motion/ProgressiveImage';
 import { FrictionScroller } from '../utils/frictionScroll';
 
 interface ArchiveViewProps {
@@ -20,7 +21,14 @@ const DEFAULT_RATIOS: Record<string, number> = {
 };
 
 export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE_ITEMS }) => {
-  const archiveItems = items && items.length >= 8 ? items : ARCHIVE_ITEMS;
+  // Use what the admin published; only fall back to the built-in set when there is nothing.
+  // Short lists are repeated so the looping track is always wider than the viewport.
+  const archiveItems = React.useMemo(() => {
+    const base = items && items.length > 0 ? items : ARCHIVE_ITEMS;
+    const out: ArchiveItem[] = [];
+    while (out.length < 8) out.push(...base);
+    return out;
+  }, [items]);
 
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -278,6 +286,18 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE
     };
   }, [expandedIndex]);
 
+  // Touch / native scrolling moves scrollLeft outside the physics loop; adopt it so
+  // the next wheel or drag doesn't snap back to a stale position.
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el || isDraggingRef.current) return;
+    if (Math.abs(el.scrollLeft - currentScrollRef.current) > 2) {
+      currentScrollRef.current = el.scrollLeft;
+      targetScrollRef.current = el.scrollLeft;
+      frictionScrollerRef.current.reset();
+    }
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!scrollRef.current) return;
     isDraggingRef.current = true;
@@ -413,6 +433,8 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE
       >
         <div
           ref={scrollRef}
+          data-cursor="drag"
+          onScroll={handleScroll}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -448,6 +470,7 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE
                   onMouseLeave={() => setHoveredIndex(null)}
                   onClick={(e) => handleCardClick(idx, e)}
                   role="button"
+                  data-cursor={isExpanded ? 'close' : 'open'}
                   tabIndex={0}
                   aria-label={
                     isExpanded
@@ -458,8 +481,10 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE
                   style={{
                     width: `${currentWidth}px`,
                     height: `${currentHeight}px`,
-                    transition:
-                      'width 650ms cubic-bezier(0.65, 0, 0.35, 1), height 650ms cubic-bezier(0.65, 0, 0.35, 1)',
+                    // No width tween until the real ratio is known, so cards don't jump on first load.
+                    transition: mediaRatios[item.id]
+                      ? 'width 650ms cubic-bezier(0.65, 0, 0.35, 1), height 650ms cubic-bezier(0.65, 0, 0.35, 1)'
+                      : 'height 650ms cubic-bezier(0.65, 0, 0.35, 1)',
                     willChange: 'width, height',
                   }}
                   className={`group relative flex-shrink-0 overflow-hidden select-none bg-black transform-gpu ${
@@ -478,11 +503,10 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE
                       className="w-full h-full object-cover pointer-events-none"
                     />
                   ) : (
-                    <img
+                    <ProgressiveImage
                       src={item.poster || item.src}
                       alt={item.title}
                       loading={idx < 10 ? 'eager' : 'lazy'}
-                      decoding="async"
                       onLoad={(e) => {
                         handleMediaLoad(
                           item.id,
@@ -490,8 +514,33 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE
                           e.currentTarget.naturalHeight
                         );
                       }}
-                      className="w-full h-full object-cover pointer-events-none"
+                      className="pointer-events-none"
                     />
+                  )}
+
+                  {/* Caption: slides up on hover, always visible when expanded */}
+                  <div
+                    className={`pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/70 to-transparent px-4 pb-3 pt-10 text-white transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.65,0,0.35,1)] ${
+                      isExpanded || isHovered ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
+                    }`}
+                  >
+                    <span className="block truncate font-mono text-[10px] uppercase tracking-[0.18em]">
+                      {item.title}
+                    </span>
+                  </div>
+
+                  {isExpanded && (
+                    <button
+                      type="button"
+                      aria-label="Close"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpandedIndex(null);
+                      }}
+                      className="absolute right-3 top-3 z-30 grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-black/55 text-white/90 backdrop-blur-md transition-colors duration-300 hover:bg-black/75 hover:text-white"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   )}
 
                   {/* Audio Mute/Unmute Toggle Button when expanded video */}

@@ -7,8 +7,18 @@ const easing = {
   exit: [0.65, 0, 0.35, 1] as Easing,
   menu: [0.76, 0, 0.24, 1] as Easing,
   easeInOut: [0.65, 0, 0.35, 1] as Easing,
+  // Slightly softer landing for things that arrive (loader, hover reveals).
+  out: [0.22, 1, 0.36, 1] as Easing,
   linear: 'linear' as Easing,
 };
+
+/** Physical feel for pointer-driven interactions (cursor, magnetic pull, press). */
+export const motionSprings = {
+  cursor: { stiffness: 520, damping: 38, mass: 0.35 },
+  cursorRing: { stiffness: 260, damping: 28, mass: 0.5 },
+  magnetic: { stiffness: 220, damping: 18, mass: 0.6 },
+  progress: { stiffness: 140, damping: 26, mass: 0.4 },
+} as const;
 
 export const motionEngineTokens = {
   gsap: {
@@ -33,6 +43,9 @@ export const motionTokens = {
     pageExit: 0.3,
     pageEnter: 0.55,
     reveal: 0.7,
+    viewExit: 0.22,
+    viewEnter: 0.5,
+    loaderExit: 0.9,
   },
   easing,
   distance: {
@@ -167,6 +180,29 @@ export const motionVariants = {
       y: -motionTokens.distance.small,
       transition: motionTransitions.exit,
     },
+  } satisfies Variants,
+  /**
+   * Whole-view swap (home / archive / about / case). `custom === 'instant'`
+   * skips the exit fade, used when a shared element is already flying across.
+   */
+  view: {
+    hidden: { opacity: 0, y: motionTokens.distance.medium },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: motionTokens.duration.viewEnter,
+        ease: motionTokens.easing.standard,
+      },
+    },
+    exit: (custom?: string) => ({
+      opacity: 0,
+      y: custom === 'instant' ? 0 : -motionTokens.distance.small,
+      transition: {
+        duration: custom === 'instant' ? 0 : motionTokens.duration.viewExit,
+        ease: motionTokens.easing.standard,
+      },
+    }),
   } satisfies Variants,
   dropdown: {
     hidden: {

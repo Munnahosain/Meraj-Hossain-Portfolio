@@ -5,18 +5,20 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { animate, motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
-import { ViewMode, CaseStudy, PortfolioData } from './types';
+import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
+import { ViewMode, CaseStudy, PortfolioData, TimeTheme } from './types';
 import { ARCHIVE_ITEMS, CASE_STUDIES, MERAJ_PROFILE } from './data/portfolioData';
 import { getTimeTheme } from './utils/timeColor';
 import { Header } from './components/Header';
 import { GalleryHome, type GalleryMediaTransition } from './components/GalleryHome';
-import { EditorialDeckCards } from './components/EditorialDeckCards';
+import { EditorialDeckCards, type DeckCardId } from './components/EditorialDeckCards';
 import { CaseStudyView } from './components/CaseStudyView';
 import { ArchiveView } from './components/ArchiveView';
 import { AboutView } from './components/AboutView';
 import { ContactModal } from './components/ContactModal';
-import { FadeUp, MotionButton } from './components/motion/MotionPrimitives';
+import { MotionButton, ViewTransition } from './components/motion/MotionPrimitives';
+import { Preloader } from './components/motion/Preloader';
+import { CustomCursor } from './components/motion/CustomCursor';
 import { useLenis } from './hooks/useLenis';
 import { motionTokens } from './lib/motion';
 import {
@@ -72,6 +74,33 @@ export default function App() {
   const [isContactOpen, setIsContactOpen] = useState(false);
   const menuProgress = useMotionValue(0);
   const shouldReduceMotion = useReducedMotion();
+  const mainRef = useRef<HTMLElement>(null);
+  const [hoveredDeck, setHoveredDeck] = useState<DeckCardId | 'cases' | null>(null);
+
+  // Page loader: shown until data, fonts and first covers are ready. Skipped for reduced motion.
+  const prefersReducedAtLoad =
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const [showPreloader, setShowPreloader] = useState(!prefersReducedAtLoad);
+  const [isBooted, setIsBooted] = useState(prefersReducedAtLoad);
+  const [bootReady, setBootReady] = useState(prefersReducedAtLoad);
+  const [dataSettled, setDataSettled] = useState(false);
+  const seenLoader = useRef(false);
+  if (typeof window !== 'undefined' && !seenLoader.current) {
+    try {
+      seenLoader.current = window.sessionStorage.getItem('mh-booted') === '1';
+    } catch {
+      seenLoader.current = false;
+    }
+  }
+  const handleReveal = useCallback(() => {
+    setIsBooted(true);
+    try {
+      window.sessionStorage.setItem('mh-booted', '1');
+    } catch {
+      /* storage unavailable: loader simply plays again next time */
+    }
+  }, []);
+  const handleLoaderDone = useCallback(() => setShowPreloader(false), []);
 
   useEffect(() => {
     if (shouldReduceMotion) {
@@ -86,8 +115,18 @@ export default function App() {
     return () => animation.stop();
   }, [isMenuOpen, menuProgress, shouldReduceMotion]);
 
-  // Initialize Lenis smooth scroll for detail/editorial views
-  useLenis(view !== 'home' && view !== 'case-detail' && !isMenuOpen);
+  // Smooth scroll for the About page, which scrolls inside the card (not the window).
+  // Wait for the previous view's exit fade so Lenis binds to the right content.
+  const [aboutReady, setAboutReady] = useState(false);
+  useEffect(() => {
+    if (view !== 'about') {
+      setAboutReady(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setAboutReady(true), 380);
+    return () => window.clearTimeout(timer);
+  }, [view]);
+  useLenis(aboutReady && !isMenuOpen, mainRef);
 
   // Time Engine: Default to Dhaka live time (UTC+6)
   const getDhakaHour = () => {
@@ -102,6 +141,19 @@ export default function App() {
   const [isScrubbing, setIsScrubbing] = useState(false);
 
   const theme = getTimeTheme(currentHour);
+  // Case studies always render on a light paper background, so the header must use dark ink there
+  // (the time-of-day theme can be dark, which made the header invisible).
+  const caseHeaderTheme: TimeTheme = {
+    ...theme,
+    bg: '#f3f1ec',
+    text: '#171713',
+    textMuted: '#5c5a54',
+    surface: '#e8e5de',
+    surfaceHover: '#dedbd2',
+    border: '#cbc7bd',
+    accent: '#16845f',
+    isLight: true,
+  };
 
   useEffect(() => {
     let active = true;
@@ -136,6 +188,9 @@ export default function App() {
           setSelectedCase(null);
           setView('home');
         }
+      })
+      .finally(() => {
+        if (active) setDataSettled(true);
       });
     return () => {
       active = false;
@@ -462,8 +517,43 @@ export default function App() {
     [portfolio.caseStudies],
   );
 
+  // Boot readiness: data in, fonts parsed, first covers decoded (with a hard 3.5s cap).
+  useEffect(() => {
+    if (bootReady) return;
+    const hardCap = window.setTimeout(() => setBootReady(true), 5000);
+    if (!dataSettled) return () => window.clearTimeout(hardCap);
+
+    let cancelled = false;
+    const covers = featuredCases
+      .slice(0, 4)
+      .map((item) => item.coverPoster || item.coverImage)
+      .filter(Boolean);
+    const images = Promise.all(
+      covers.map(
+        (src) =>
+          new Promise<void>((resolve) => {
+            const image = new Image();
+            image.onload = () => resolve();
+            image.onerror = () => resolve();
+            image.src = src;
+          }),
+      ),
+    );
+    const fonts = document.fonts?.ready ?? Promise.resolve();
+    const cap = new Promise<void>((resolve) => window.setTimeout(resolve, 3500));
+    Promise.race([Promise.all([images, fonts]), cap]).then(() => {
+      if (!cancelled) setBootReady(true);
+    });
+    return () => {
+      cancelled = true;
+      window.clearTimeout(hardCap);
+    };
+  }, [bootReady, dataSettled, featuredCases]);
+
   return (
     <div
+      data-menu-open={isMenuOpen}
+      data-deck-hover={hoveredDeck ?? ''}
       className={`relative h-screen w-full font-sans selection:bg-[#18C98A] selection:text-[#101114] overflow-hidden ${
         isScrubbing ? 'transition-none' : 'transition-colors duration-700 ease-out'
       }`}
@@ -510,9 +600,10 @@ export default function App() {
         menuSignatureWidth={isDesktop ? 101 : 76}
         viewportWidth={windowSize.width}
         menuProgress={menuProgress}
-        theme={theme}
+        theme={view === 'case-detail' && !isMenuOpen ? caseHeaderTheme : theme}
         onScrubStateChange={setIsScrubbing}
         deckRepelX={deckRepelX}
+        isBooted={isBooted}
       />
 
       {/* ========================================================
@@ -526,6 +617,13 @@ export default function App() {
           5. No Scrollbar: Strictly overflow-hidden in hero section as requested
           ======================================================== */}
       <motion.main
+        ref={mainRef}
+        data-deck-card="cases"
+        data-cursor={isMenuOpen ? 'open' : undefined}
+        onPointerEnter={(event) => {
+          if (isMenuOpen && event.pointerType === 'mouse') setHoveredDeck('cases');
+        }}
+        onPointerLeave={() => setHoveredDeck((current) => (current === 'cases' ? null : current))}
         onClick={isMenuOpen ? () => setIsMenuOpen(false) : undefined}
         initial={false}
         className={`fixed ${
@@ -552,8 +650,9 @@ export default function App() {
         title={isMenuOpen ? 'Click to expand cases full screen' : undefined}
       >
         {/* Keep the live home rail mounted while it becomes the menu's clipped hero window. */}
+        <AnimatePresence mode="wait" initial={false} custom={sharedHeroImage ? 'instant' : 'fade'}>
         {(!isMenuOpen || view === 'home') && (
-          <FadeUp
+          <ViewTransition
             key={view === 'case-detail' ? selectedCase?.id || view : view}
             className={`w-full ${
               view === 'home' || view === 'archive'
@@ -571,6 +670,8 @@ export default function App() {
                 isTransitioning={Boolean(transitionTarget)}
                 transitionSelectionKey={transitionSelectionKey}
                 transitionEasing={transitionTarget ? getProjectMotionEasing(transitionTarget) : undefined}
+                introEnabled={isBooted}
+                keyboardEnabled={view === 'home' && !isMenuOpen && !isContactOpen}
                 theme={theme}
               />
             )}
@@ -604,8 +705,9 @@ export default function App() {
                 theme={theme}
               />
             )}
-          </FadeUp>
+          </ViewTransition>
         )}
+        </AnimatePresence>
 
         {/* Menu framing over the live gallery window */}
         {isMenuOpen && (
@@ -640,6 +742,7 @@ export default function App() {
         cardWidth={cardWidth}
         cardHeight={cardHeight}
         cardTop={cardTop}
+        card1Left={card1Left}
         card2Left={card2Left}
         card3Left={card3Left}
         isDesktop={isDesktop}
@@ -647,6 +750,7 @@ export default function App() {
         windowWidth={windowSize.width}
         windowHeight={windowSize.height}
         deckRepelX={deckRepelX}
+        onHoverCard={setHoveredDeck}
       />
 
       {/* Mobile Indicator Buttons when in Menu mode */}
@@ -726,6 +830,17 @@ export default function App() {
           document.body,
         )}
 
+      <CustomCursor />
+
+      {showPreloader && (
+        <Preloader
+          isReady={bootReady}
+          compact={seenLoader.current}
+          theme={theme}
+          onReveal={handleReveal}
+          onDone={handleLoaderDone}
+        />
+      )}
     </div>
   );
 }

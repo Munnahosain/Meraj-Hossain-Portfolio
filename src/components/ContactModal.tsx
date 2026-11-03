@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { MerajProfile, TimeTheme } from '../types';
 import { X, Check, Copy } from 'lucide-react';
 import {
@@ -16,65 +16,233 @@ interface ContactModalProps {
   theme: TimeTheme;
 }
 
-export const ContactModal: React.FC<ContactModalProps> = ({
-  isOpen,
-  onClose,
-  persona,
-}) => {
-  const [tab, setTab] = useState<'client' | 'talent' | 'email'>('client');
+type Tab = 'client' | 'talent' | 'email';
+type SubmitStatus = 'idle' | 'sending' | 'error';
 
-  // Form State
+const scopesList = [
+  'Motion graphics',
+  'Video editing',
+  'Color grading',
+  'Graphic design',
+  'Social media creatives',
+  'Promotional video campaigns',
+  'Branding & advertising',
+  'Stock template creation',
+];
+const formatsList = ['Project Contract', 'Full-time / Remote', 'Retainer'];
+const budgetsList = ['<$1,000', '$1,000 – $3,000', '$3,000 – $10,000', '$10,000+', "Let's discuss first"];
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+const inputClass =
+  'w-full bg-transparent border-b border-[#18C98A]/30 py-2 outline-none font-sans text-sm text-[#f2f4f3] placeholder:text-[#8e9693]/40';
+const labelClass = 'block font-mono text-[10px] tracking-widest uppercase text-[#8e9693] mb-1';
+
+/** Text field whose underline draws in on focus. */
+const Field: React.FC<{ label: string; className?: string; children: React.ReactNode }> = ({
+  label,
+  className = '',
+  children,
+}) => (
+  <label className={`field relative block ${className}`}>
+    <span className={labelClass}>{label}</span>
+    <span className="relative block">
+      {children}
+      <span className="field-bar" aria-hidden="true" />
+    </span>
+  </label>
+);
+
+const EMPTY_FORM = {
+  name: '',
+  email: '',
+  company: '',
+  timeline: '',
+  message: '',
+  discipline: '',
+  portfolio: '',
+  website: '', // honeypot: real people never see or fill this
+};
+
+export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, persona }) => {
+  const [tab, setTab] = useState<Tab>('client');
   const [selectedScopes, setSelectedScopes] = useState<string[]>(['Motion graphics']);
-  const [selectedFormat, setSelectedFormat] = useState('Project');
-  const [selectedBudget, setSelectedBudget] = useState('€1,000 – €5,000');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [company, setCompany] = useState('');
-  const [timeline, setTimeline] = useState('');
-  const [message, setMessage] = useState('');
+  const [selectedFormat, setSelectedFormat] = useState('Project Contract');
+  const [selectedBudget, setSelectedBudget] = useState('$1,000 – $3,000');
+  const [form, setForm] = useState(EMPTY_FORM);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [status, setStatus] = useState<SubmitStatus>('idle');
   const [copiedEmail, setCopiedEmail] = useState(false);
+
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const copyTimerRef = useRef<number | null>(null);
+
+  const setField = (key: keyof typeof EMPTY_FORM) => (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => setForm((prev) => ({ ...prev, [key]: event.target.value }));
 
   const toggleScope = (scope: string) => {
     setSelectedScopes((prev) =>
-      prev.includes(scope) ? prev.filter((s) => s !== scope) : [...prev, scope]
+      prev.includes(scope) ? prev.filter((item) => item !== scope) : [...prev, scope],
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitted(true);
+  // Start fresh next time the modal opens (runs after the exit animation).
+  const resetAfterClose = () => {
+    setTab('client');
+    setIsSubmitted(false);
+    setStatus('idle');
+    setForm(EMPTY_FORM);
+    setSelectedScopes(['Motion graphics']);
+    setSelectedFormat('Project Contract');
+    setSelectedBudget('$1,000 – $3,000');
   };
 
-  const handleCopyEmail = () => {
-    navigator.clipboard.writeText(persona.email);
-    setCopiedEmail(true);
-    setTimeout(() => setCopiedEmail(false), 2000);
+  // Focus management: move focus in, trap Tab, close on Escape, restore on close.
+  useEffect(() => {
+    if (!isOpen) return;
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const frame = window.requestAnimationFrame(() => {
+      dialogRef.current?.querySelector<HTMLElement>('input, button')?.focus({ preventScroll: true });
+    });
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+      const nodes = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+        (node) => node.offsetParent !== null,
+      );
+      if (nodes.length === 0) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !dialogRef.current.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !dialogRef.current.contains(active))) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('keydown', onKey, true);
+      returnFocusRef.current?.focus?.({ preventScroll: true });
+    };
+  }, [isOpen, onClose]);
+
+  useEffect(
+    () => () => {
+      if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+    },
+    [],
+  );
+
+  const submit = useCallback(
+    async (kind: 'client' | 'talent', event: React.FormEvent) => {
+      event.preventDefault();
+      if (status === 'sending') return;
+      setStatus('sending');
+      const payload =
+        kind === 'client'
+          ? {
+              kind,
+              name: form.name,
+              email: form.email,
+              company: form.company,
+              timeline: form.timeline,
+              message: form.message,
+              scopes: selectedScopes,
+              format: selectedFormat,
+              budget: selectedBudget,
+              website: form.website,
+            }
+          : {
+              kind,
+              name: form.name,
+              email: form.email,
+              discipline: form.discipline,
+              portfolio: form.portfolio,
+              message: form.message,
+              website: form.website,
+            };
+      try {
+        const response = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error(String(response.status));
+        setIsSubmitted(true);
+        setStatus('idle');
+      } catch {
+        setStatus('error');
+      }
+    },
+    [form, selectedBudget, selectedFormat, selectedScopes, status],
+  );
+
+  const handleCopyEmail = async () => {
+    try {
+      await navigator.clipboard.writeText(persona.email);
+      setCopiedEmail(true);
+    } catch {
+      // Clipboard can be blocked (insecure context, permissions); the address is still on screen.
+      window.location.href = `mailto:${persona.email}`;
+      return;
+    }
+    if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = window.setTimeout(() => setCopiedEmail(false), 2000);
   };
 
-  const scopesList = [
-    'Motion graphics',
-    'Video editing',
-    'Color grading',
-    'Graphic design',
-    'Social media creatives',
-    'Promotional video campaigns',
-    'Branding & advertising',
-    'Stock template creation',
+  const mailtoFallback = `mailto:${persona.email}?subject=${encodeURIComponent(
+    'Project inquiry',
+  )}&body=${encodeURIComponent(form.message)}`;
+
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'client', label: 'Client Brief' },
+    { id: 'talent', label: 'Collaboration' },
+    { id: 'email', label: 'Direct Contacts' },
   ];
 
-  const formatsList = ['Project Contract', 'Full-time / Remote', 'Retainer'];
+  const sending = status === 'sending';
+  const submitLabel = (idle: string) => (sending ? 'Sending…' : idle);
 
-  const budgetsList = [
-    '<$1,000',
-    '$1,000 – $3,000',
-    '$3,000 – $10,000',
-    '$10,000+',
-    "Let's discuss first",
-  ];
+  const honeypot = (
+    <input
+      type="text"
+      name="website"
+      tabIndex={-1}
+      autoComplete="off"
+      aria-hidden="true"
+      value={form.website}
+      onChange={setField('website')}
+      className="absolute -left-[9999px] h-0 w-0 opacity-0"
+    />
+  );
+
+  const errorNote =
+    status === 'error' ? (
+      <p role="alert" className="font-mono text-[11px] tracking-wider text-[#ff8a7a]">
+        Couldn’t send that just now.{' '}
+        <a href={mailtoFallback} className="underline underline-offset-4 hover:text-[#18C98A]">
+          Email me directly instead
+        </a>
+        .
+      </p>
+    ) : null;
+
+  const submitButtonClass =
+    'px-8 py-3 rounded bg-[#18C98A] text-[#101114] font-mono text-xs font-semibold tracking-widest uppercase hover:bg-[#18C98A]/90 motion-transition-colors shadow-[0_0_15px_rgba(24,201,138,0.4)] cursor-pointer disabled:cursor-wait disabled:opacity-70';
 
   return (
-    <AnimatePresence>
+    <AnimatePresence onExitComplete={resetAfterClose}>
       {isOpen && (
     <MotionModalBackdrop
       onClick={onClose}
@@ -82,6 +250,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
     >
       {/* Paper Container Card in #101114 obsidian with #18C98A border */}
       <MotionModalContent
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Contact Meraj Hossain"
@@ -90,35 +259,35 @@ export const ContactModal: React.FC<ContactModalProps> = ({
       >
         {/* Top Tab Bar & Close Button */}
         <div className="p-6 sm:p-8 flex items-center justify-between border-b border-[#18C98A]/15 shrink-0 bg-[#16181e]">
-          <div className="flex items-center gap-6 sm:gap-8 font-mono text-[11px] tracking-widest uppercase font-semibold">
-            <MotionButton
-              onClick={() => setTab('client')}
-              className={`cursor-pointer motion-transition-colors ${
-                tab === 'client' ? 'text-[#18C98A] underline underline-offset-4' : 'text-[#8e9693] hover:text-[#f2f4f3]'
-              }`}
-            >
-              Client Brief
-            </MotionButton>
-            <MotionButton
-              onClick={() => setTab('talent')}
-              className={`cursor-pointer motion-transition-colors ${
-                tab === 'talent' ? 'text-[#18C98A] underline underline-offset-4' : 'text-[#8e9693] hover:text-[#f2f4f3]'
-              }`}
-            >
-              Collaboration
-            </MotionButton>
-            <MotionButton
-              onClick={() => setTab('email')}
-              className={`cursor-pointer motion-transition-colors ${
-                tab === 'email' ? 'text-[#18C98A] underline underline-offset-4' : 'text-[#8e9693] hover:text-[#f2f4f3]'
-              }`}
-            >
-              Direct Contacts
-            </MotionButton>
+          <div role="tablist" className="flex items-center gap-5 sm:gap-8 font-mono text-[11px] tracking-widest uppercase font-semibold">
+            {tabs.map((item) => (
+              <MotionButton
+                key={item.id}
+                role="tab"
+                aria-selected={tab === item.id}
+                onClick={() => {
+                  setTab(item.id);
+                  setStatus('idle');
+                }}
+                className={`relative cursor-pointer pb-1.5 motion-transition-colors ${
+                  tab === item.id ? 'text-[#18C98A]' : 'text-[#8e9693] hover:text-[#f2f4f3]'
+                }`}
+              >
+                {item.label}
+                {tab === item.id && (
+                  <motion.span
+                    layoutId="contact-tab-underline"
+                    className="absolute inset-x-0 bottom-0 h-px bg-[#18C98A]"
+                    transition={{ duration: 0.45, ease: [0.65, 0, 0.35, 1] }}
+                  />
+                )}
+              </MotionButton>
+            ))}
           </div>
 
           <MotionButton
             onClick={onClose}
+            aria-label="Close contact dialog"
             className="flex items-center gap-1 font-mono text-[11px] tracking-widest uppercase hover:text-[#18C98A] motion-transition-colors cursor-pointer text-[#8e9693]"
           >
             <span>Close</span>
@@ -164,7 +333,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-10">
+              <form onSubmit={(event) => submit('client', event)} className="relative space-y-10">{honeypot}
                 {/* 01. Scope */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                   <div className="md:col-span-4 font-mono text-[11px] tracking-widest uppercase text-[#18C98A]">
@@ -174,22 +343,29 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                     {scopesList.map((scope) => {
                       const checked = selectedScopes.includes(scope);
                       return (
-                        <label
+                        <button
+                          type="button"
+                          role="checkbox"
+                          aria-checked={checked}
                           key={scope}
                           onClick={() => toggleScope(scope)}
-                          className="flex items-center gap-3 cursor-pointer select-none text-xs sm:text-sm text-[#f2f4f3] font-light hover:text-[#18C98A]"
+                          className="group/check flex items-center gap-3 cursor-pointer select-none text-left text-xs sm:text-sm text-[#f2f4f3] font-light motion-transition-colors hover:text-[#18C98A]"
                         >
-                          <div
-                            className={`w-3.5 h-3.5 border rounded-sm flex items-center justify-center motion-transition-colors ${
+                          <span
+                            className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm border transition-[background-color,border-color,transform] duration-300 ease-[cubic-bezier(0.65,0,0.35,1)] group-active/check:scale-90 ${
                               checked
                                 ? 'bg-[#18C98A] border-[#18C98A] text-[#101114]'
                                 : 'border-[#18C98A]/40 bg-transparent'
                             }`}
                           >
-                            {checked && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                          </div>
+                            <Check
+                              className={`h-2.5 w-2.5 stroke-[3] transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.65,0,0.35,1)] ${
+                                checked ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
+                              }`}
+                            />
+                          </span>
                           <span>{scope}</span>
-                        </label>
+                        </button>
                       );
                     })}
                   </div>
@@ -243,84 +419,30 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
                 {/* Contact Inputs */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-[#18C98A]/15">
-                  <div>
-                    <label className="block font-mono text-[10px] tracking-widest uppercase text-[#8e9693] mb-1">
-                      04. Name*
-                    </label>
-                    <input
-                      required
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Jane Doe"
-                      className="w-full bg-transparent border-b border-[#18C98A]/30 py-2 focus:border-[#18C98A] outline-none font-sans text-sm text-[#f2f4f3] placeholder:text-[#8e9693]/40"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-mono text-[10px] tracking-widest uppercase text-[#8e9693] mb-1">
-                      05. Email*
-                    </label>
-                    <input
-                      required
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="jane@agency.com"
-                      className="w-full bg-transparent border-b border-[#18C98A]/30 py-2 focus:border-[#18C98A] outline-none font-sans text-sm text-[#f2f4f3] placeholder:text-[#8e9693]/40"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-mono text-[10px] tracking-widest uppercase text-[#8e9693] mb-1">
-                      06. Company / Brand
-                    </label>
-                    <input
-                      type="text"
-                      value={company}
-                      onChange={(e) => setCompany(e.target.value)}
-                      placeholder="Agency / Brand Name"
-                      className="w-full bg-transparent border-b border-[#18C98A]/30 py-2 focus:border-[#18C98A] outline-none font-sans text-sm text-[#f2f4f3] placeholder:text-[#8e9693]/40"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-mono text-[10px] tracking-widest uppercase text-[#8e9693] mb-1">
-                      07. Timeline
-                    </label>
-                    <input
-                      type="text"
-                      value={timeline}
-                      onChange={(e) => setTimeline(e.target.value)}
-                      placeholder="Immediate / Next month"
-                      className="w-full bg-transparent border-b border-[#18C98A]/30 py-2 focus:border-[#18C98A] outline-none font-sans text-sm text-[#f2f4f3] placeholder:text-[#8e9693]/40"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="block font-mono text-[10px] tracking-widest uppercase text-[#8e9693] mb-1">
-                      08. Project Brief / Deliverables Required
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Describe the campaign, video duration, visual style, or motion reference..."
-                      className="w-full bg-transparent border-b border-[#18C98A]/30 py-2 focus:border-[#18C98A] outline-none font-sans text-sm text-[#f2f4f3] placeholder:text-[#8e9693]/40 resize-none"
-                    />
-                  </div>
+                  <Field label="04. Name*">
+                    <input required type="text" autoComplete="name" value={form.name} onChange={setField('name')} placeholder="Jane Doe" className={inputClass} />
+                  </Field>
+                  <Field label="05. Email*">
+                    <input required type="email" autoComplete="email" value={form.email} onChange={setField('email')} placeholder="jane@agency.com" className={inputClass} />
+                  </Field>
+                  <Field label="06. Company / Brand">
+                    <input type="text" autoComplete="organization" value={form.company} onChange={setField('company')} placeholder="Agency / Brand Name" className={inputClass} />
+                  </Field>
+                  <Field label="07. Timeline">
+                    <input type="text" value={form.timeline} onChange={setField('timeline')} placeholder="Immediate / Next month" className={inputClass} />
+                  </Field>
+                  <Field label="08. Project Brief / Deliverables Required" className="sm:col-span-2">
+                    <textarea rows={3} value={form.message} onChange={setField('message')} placeholder="Describe the campaign, video duration, visual style, or motion reference..." className={`${inputClass} resize-none`} />
+                  </Field>
                 </div>
 
                 {/* Submit Row */}
-                <div className="pt-4 flex items-center justify-between">
-                  <span className="font-mono text-[10px] text-[#8e9693] uppercase tracking-widest">
-                    * Required fields
-                  </span>
-                  <MotionButton
-                    type="submit"
-                    className="px-8 py-3 rounded bg-[#18C98A] text-[#101114] font-mono text-xs font-semibold tracking-widest uppercase hover:bg-[#18C98A]/90 motion-transition-colors shadow-[0_0_15px_rgba(24,201,138,0.4)] cursor-pointer"
-                  >
-                    Send Project Brief
+                <div className="pt-4 flex flex-wrap items-center justify-between gap-4">
+                  <div className="font-mono text-[10px] text-[#8e9693] uppercase tracking-widest">
+                    {errorNote ?? '* Required fields'}
+                  </div>
+                  <MotionButton type="submit" disabled={sending} aria-busy={sending} className={submitButtonClass}>
+                    {submitLabel('Send Project Brief')}
                   </MotionButton>
                 </div>
               </form>
@@ -337,73 +459,29 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label className="block font-mono text-[10px] tracking-widest uppercase text-[#8e9693] mb-1">
-                    Your Discipline
-                  </label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="3D Animation / Sound Design / Cinematography"
-                    className="w-full bg-transparent border-b border-[#18C98A]/30 py-2 focus:border-[#18C98A] outline-none font-sans text-sm text-[#f2f4f3] placeholder:text-[#8e9693]/40"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-mono text-[10px] tracking-widest uppercase text-[#8e9693] mb-1">
-                    Showreel / Portfolio URL
-                  </label>
-                  <input
-                    required
-                    type="url"
-                    placeholder="https://behance.net/... or https://vimeo.com/..."
-                    className="w-full bg-transparent border-b border-[#18C98A]/30 py-2 focus:border-[#18C98A] outline-none font-sans text-sm text-[#f2f4f3] placeholder:text-[#8e9693]/40"
-                  />
-                </div>
-
+              <form onSubmit={(event) => submit('talent', event)} className="relative space-y-6">
+                {honeypot}
+                <Field label="Your Discipline">
+                  <input required type="text" value={form.discipline} onChange={setField('discipline')} placeholder="3D Animation / Sound Design / Cinematography" className={inputClass} />
+                </Field>
+                <Field label="Showreel / Portfolio URL">
+                  <input required type="url" value={form.portfolio} onChange={setField('portfolio')} placeholder="https://behance.net/... or https://vimeo.com/..." className={inputClass} />
+                </Field>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block font-mono text-[10px] tracking-widest uppercase text-[#8e9693] mb-1">
-                      Your Name
-                    </label>
-                    <input
-                      required
-                      type="text"
-                      placeholder="Your Name"
-                      className="w-full bg-transparent border-b border-[#18C98A]/30 py-2 focus:border-[#18C98A] outline-none font-sans text-sm text-[#f2f4f3] placeholder:text-[#8e9693]/40"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-mono text-[10px] tracking-widest uppercase text-[#8e9693] mb-1">
-                      Email
-                    </label>
-                    <input
-                      required
-                      type="email"
-                      placeholder="your.email@studio.com"
-                      className="w-full bg-transparent border-b border-[#18C98A]/30 py-2 focus:border-[#18C98A] outline-none font-sans text-sm text-[#f2f4f3] placeholder:text-[#8e9693]/40"
-                    />
-                  </div>
+                  <Field label="Your Name">
+                    <input required type="text" autoComplete="name" value={form.name} onChange={setField('name')} placeholder="Your Name" className={inputClass} />
+                  </Field>
+                  <Field label="Email">
+                    <input required type="email" autoComplete="email" value={form.email} onChange={setField('email')} placeholder="your.email@studio.com" className={inputClass} />
+                  </Field>
                 </div>
-
-                <div>
-                  <label className="block font-mono text-[10px] tracking-widest uppercase text-[#8e9693] mb-1">
-                    Note / Message
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="Tell me about yourself and what you love creating..."
-                    className="w-full bg-transparent border-b border-[#18C98A]/30 py-2 focus:border-[#18C98A] outline-none font-sans text-sm text-[#f2f4f3] placeholder:text-[#8e9693]/40 resize-none"
-                  />
-                </div>
-
-                <div className="pt-4 flex justify-end">
-                  <MotionButton
-                    type="submit"
-                    className="px-8 py-3 rounded bg-[#18C98A] text-[#101114] font-mono text-xs font-semibold tracking-widest uppercase hover:bg-[#18C98A]/90 motion-transition-colors shadow-[0_0_15px_rgba(24,201,138,0.4)] cursor-pointer"
-                  >
-                    Submit Details
+                <Field label="Note / Message">
+                  <textarea rows={2} value={form.message} onChange={setField('message')} placeholder="Tell me about yourself and what you love creating..." className={`${inputClass} resize-none`} />
+                </Field>
+                <div className="pt-4 flex flex-wrap items-center justify-between gap-4">
+                  <div>{errorNote}</div>
+                  <MotionButton type="submit" disabled={sending} aria-busy={sending} className={submitButtonClass}>
+                    {submitLabel('Submit Details')}
                   </MotionButton>
                 </div>
               </form>
@@ -424,6 +502,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                   </a>
                   <MotionButton
                     onClick={handleCopyEmail}
+                    aria-label="Copy email address"
                     className="p-2 rounded border border-[#18C98A]/30 hover:bg-[#18C98A]/10 text-[#18C98A] motion-transition-colors cursor-pointer"
                     title="Copy Email"
                   >
