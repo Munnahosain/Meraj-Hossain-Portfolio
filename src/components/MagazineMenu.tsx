@@ -127,7 +127,7 @@ export const MagazineMenu: React.FC<MagazineMenuProps> = ({
               ======================================================== */}
           <div
             onClick={() => handleSelect('cases')}
-            className="group relative flex flex-col justify-between p-6 sm:p-8 cursor-pointer rounded-sm shadow-xl transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-2 hover:shadow-2xl"
+            className="group relative flex flex-col justify-between p-6 sm:p-8 cursor-pointer rounded-sm shadow-xl transition-all duration-700 ease-[cubic-bezier(0.65,0,0.35,1)] hover:-translate-y-2 hover:shadow-2xl"
             style={{
               backgroundColor: cardBg,
               borderColor: cardBorder,
@@ -227,7 +227,7 @@ export const MagazineMenu: React.FC<MagazineMenuProps> = ({
               ======================================================== */}
           <div
             onClick={() => handleSelect('archive')}
-            className="group relative flex flex-col justify-between p-6 sm:p-8 cursor-pointer rounded-sm shadow-xl transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-2 hover:shadow-2xl"
+            className="group relative flex flex-col justify-between p-6 sm:p-8 cursor-pointer rounded-sm shadow-xl transition-all duration-700 ease-[cubic-bezier(0.65,0,0.35,1)] hover:-translate-y-2 hover:shadow-2xl"
             style={{
               backgroundColor: cardBg,
               borderColor: cardBorder,
@@ -338,7 +338,7 @@ export const MagazineMenu: React.FC<MagazineMenuProps> = ({
               ======================================================== */}
           <div
             onClick={() => handleSelect('about')}
-            className="group relative flex flex-col justify-between p-6 sm:p-8 cursor-pointer rounded-sm shadow-xl transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-2 hover:shadow-2xl"
+            className="group relative flex flex-col justify-between p-6 sm:p-8 cursor-pointer rounded-sm shadow-xl transition-all duration-700 ease-[cubic-bezier(0.65,0,0.35,1)] hover:-translate-y-2 hover:shadow-2xl"
             style={{
               backgroundColor: cardBg,
               borderColor: cardBorder,

@@ -1,342 +1,527 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ARCHIVE_ITEMS } from '../data/portfolioData';
 import { ArchiveItem, TimeTheme } from '../types';
-import { X, Maximize2 } from 'lucide-react';
-import {
-  MotionButton,
-  MotionCard,
-  MotionModalBackdrop,
-  MotionModalContent,
-} from './motion/MotionPrimitives';
-import { motionTokens } from '../lib/motion';
+import { Volume2, VolumeX } from 'lucide-react';
+import { FrictionScroller } from '../utils/frictionScroll';
 
 interface ArchiveViewProps {
   theme: TimeTheme;
   items?: ArchiveItem[];
 }
 
-const ARCHIVE_BACKGROUND = '#e5e2da';
-const ARCHIVE_FOREGROUND = '#171717';
+// Intrinsic ratios for archive media
+const DEFAULT_RATIOS: Record<string, number> = {
+  'arch-1': 0.66, // Mirror room (portrait)
+  'arch-2': 0.84, // Sunflower vase (portrait/square)
+  'arch-7': 1.0, // Folded paper packaging box (square)
+  'arch-bestseller': 1.36, // Bestseller Spring installation (wide landscape)
+  'arch-copenhagen': 0.76, // Copenhagen Fashion Week garment rack (portrait)
+  'arch-6': 1.0, // Chrome 30 installation (square)
+};
 
 export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE_ITEMS }) => {
-  const [activeItem, setActiveItem] = useState<ArchiveItem | null>(null);
-  const [hoveredItem, setHoveredItem] = useState<ArchiveItem | null>(null);
-  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
-  const [mediaRatios, setMediaRatios] = useState<Record<string, number>>({});
-  const [viewportHeight, setViewportHeight] = useState(900);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const archiveItems = items && items.length >= 8 ? items : ARCHIVE_ITEMS;
+
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [isMuted, setIsMuted] = useState<boolean>(true);
+  const [mediaRatios, setMediaRatios] = useState<Record<string, number>>(DEFAULT_RATIOS);
+  const [viewportHeight, setViewportHeight] = useState(
+    typeof window !== 'undefined' ? window.innerHeight : 900
+  );
+  const [viewportWidth, setViewportWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 1440
+  );
+
+  const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const cardHeight = Math.max(240, Math.min(viewportHeight * 0.43, 680));
+  const trackRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const scheduleFrameRef = useRef<(() => void) | null>(null);
 
-  const setMediaRatio = (id: string, width: number, height: number) => {
+  // Normal bottom strip height (~44% of viewport height)
+  const stripHeight = Math.max(260, Math.min(viewportHeight * 0.44, 460));
+
+  // Expanded hero card height: extends up to just below header/signature (exact match to image_2e70c37f.png)
+  const expandedHeight = Math.max(stripHeight, viewportHeight - 56);
+
+  const handleMediaLoad = (id: string, width: number, height: number) => {
     if (!width || !height) return;
-    setMediaRatios((current) => ({ ...current, [id]: width / height }));
+    setMediaRatios((prev) => ({
+      ...prev,
+      [id]: width / height,
+    }));
   };
 
-  // Track mouse coordinates for floating preview card
+  // Cloned sets for circular momentum loop
+  const infiniteItems = React.useMemo(() => {
+    return [...archiveItems, ...archiveItems, ...archiveItems];
+  }, [archiveItems]);
+
+  const frictionScrollerRef = useRef<FrictionScroller>(
+    new FrictionScroller({
+      friction: 0.928,
+      impulseFactor: 0.42,
+      baseNotchImpulse: 9.2,
+      maxVelocity: 125,
+      streakTimeoutMs: 195,
+      streakRampStep: 0.28,
+      maxStreakMultiplier: 3.2,
+      spring: 'tactile',
+    })
+  );
+
+  const targetScrollRef = useRef<number>(0);
+  const currentScrollRef = useRef<number>(0);
+  const isDraggingRef = useRef<boolean>(false);
+  const startXRef = useRef<number>(0);
+  const startScrollRef = useRef<number>(0);
+  const lastXRef = useRef<number>(0);
+  const lastTimeRef = useRef<number>(0);
+  const dragVelocityRef = useRef<number>(0);
+  const [draggedDistance, setDraggedDistance] = useState(0);
+
+  const setBlockWidthRef = useRef<number>(0);
+
+  const calculateOffsets = useCallback(() => {
+    if (!scrollRef.current) return;
+    const firstCard = cardRefs.current[0];
+    const middleCard0 = cardRefs.current[archiveItems.length];
+    if (firstCard && middleCard0) {
+      setBlockWidthRef.current = middleCard0.offsetLeft - firstCard.offsetLeft;
+    }
+  }, [archiveItems.length]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportHeight(window.innerHeight);
+      setViewportWidth(window.innerWidth);
+      calculateOffsets();
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
+    const timer = setTimeout(() => {
+      calculateOffsets();
+      const blockWidth = setBlockWidthRef.current;
+      if (scrollRef.current && blockWidth > 0) {
+        scrollRef.current.scrollLeft = blockWidth;
+        targetScrollRef.current = blockWidth;
+        currentScrollRef.current = blockWidth;
+      }
+    }, 60);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [calculateOffsets]);
+
+  // Center an item smoothly in viewport (used for arrow keys)
+  const centerCard = useCallback(
+    (idx: number) => {
+      const scrollEl = scrollRef.current;
+      const cardEl = cardRefs.current[idx];
+      if (!scrollEl || !cardEl) return;
+
+      const item = infiniteItems[idx];
+      const ratio = mediaRatios[item.id] || DEFAULT_RATIOS[item.id] || 0.8;
+      const targetCardWidth = Math.round(
+        Math.min(expandedHeight * ratio, viewportWidth * 0.88)
+      );
+      const vWidth = scrollEl.clientWidth;
+
+      // Card offset relative to the track
+      const cardLeft = cardEl.offsetLeft;
+      const targetScroll = cardLeft - (vWidth - targetCardWidth) / 2;
+
+      targetScrollRef.current = Math.max(0, targetScroll);
+      scheduleFrameRef.current?.();
+    },
+    [expandedHeight, infiniteItems, mediaRatios, viewportWidth]
+  );
+
+  // In-place card click handler: expands right where the user clicked without jumping positions
+  const handleCardClick = (idx: number, e: React.MouseEvent) => {
+    if (draggedDistance >= 10) return;
+    e.stopPropagation();
+
+    if (expandedIndex === idx) {
+      // Collapse in-place
+      setExpandedIndex(null);
+      return;
+    }
+
+    const prevExpanded = expandedIndex;
+    const cardEl = cardRefs.current[idx];
+    const scrollEl = scrollRef.current;
+
+    setExpandedIndex(idx);
+
+    if (cardEl && scrollEl) {
+      const item = infiniteItems[idx];
+      const ratio = mediaRatios[item.id] || DEFAULT_RATIOS[item.id] || 0.8;
+      const targetWidth = Math.round(
+        Math.min(expandedHeight * ratio, viewportWidth * 0.88)
+      );
+
+      // If a card to the left was previously expanded, compensate for its collapse
+      // so this card stays locked at the exact same screen X position with 0 jump
+      if (prevExpanded !== null && prevExpanded < idx) {
+        const prevItem = infiniteItems[prevExpanded];
+        const prevRatio = mediaRatios[prevItem.id] || DEFAULT_RATIOS[prevItem.id] || 0.8;
+        const prevTargetWidth = Math.round(
+          Math.min(expandedHeight * prevRatio, viewportWidth * 0.88)
+        );
+        const prevNormalWidth = Math.round(stripHeight * prevRatio);
+        const widthShrinkage = prevTargetWidth - prevNormalWidth;
+
+        scrollEl.scrollLeft -= widthShrinkage;
+        currentScrollRef.current -= widthShrinkage;
+        targetScrollRef.current -= widthShrinkage;
+      }
+
+      // Check if expanding the card in-place would exceed the screen bounds
+      const cardRect = cardEl.getBoundingClientRect();
+      const margin = 24;
+
+      if (cardRect.left < margin) {
+        // Gently bring left edge into view
+        const underflow = margin - cardRect.left;
+        targetScrollRef.current = Math.max(0, targetScrollRef.current - underflow);
+        scheduleFrameRef.current?.();
+      } else if (cardRect.left + targetWidth > viewportWidth - margin) {
+        // Gently bring right edge into view
+        const overflow = cardRect.left + targetWidth - (viewportWidth - margin);
+        targetScrollRef.current += overflow;
+        scheduleFrameRef.current?.();
+      }
+    }
+  };
+
+  // High-performance smooth momentum loop
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const scrollElement = el;
+
+    let rafId: number | null = null;
+    let isRunning = true;
+    let lastTime = performance.now();
+
+    const scheduleFrame = () => {
+      if (isRunning && rafId === null) {
+        rafId = requestAnimationFrame(smoothScrollLoop);
+      }
+    };
+    scheduleFrameRef.current = scheduleFrame;
+
+    function smoothScrollLoop() {
+      rafId = null;
+      if (!isRunning) return;
+      const now = performance.now();
+      const dt = Math.min(now - lastTime, 32);
+      lastTime = now;
+
+      const physics = frictionScrollerRef.current.update(
+        currentScrollRef.current,
+        targetScrollRef.current,
+        dt
+      );
+
+      if (!isDraggingRef.current) {
+        targetScrollRef.current = physics.newTarget;
+        currentScrollRef.current = physics.newScroll;
+        scrollElement.scrollLeft = physics.newScroll;
+      }
+
+      // Vertical spring squish dynamic scale
+      if (trackRef.current) {
+        trackRef.current.style.transform = `translate3d(0, 0, 0) scale(1, ${physics.dynamicScale})`;
+      }
+
+      const setWidth = setBlockWidthRef.current;
+      // Only do circular boundary wrap when no card is actively expanded
+      if (setWidth > 0 && !isDraggingRef.current && expandedIndex === null) {
+        if (currentScrollRef.current >= 2 * setWidth) {
+          currentScrollRef.current -= setWidth;
+          targetScrollRef.current -= setWidth;
+          scrollElement.scrollLeft -= setWidth;
+        } else if (currentScrollRef.current <= 0.5 * setWidth) {
+          currentScrollRef.current += setWidth;
+          targetScrollRef.current += setWidth;
+          scrollElement.scrollLeft += setWidth;
+        }
+      }
+
+      if (physics.isMoving || isDraggingRef.current) scheduleFrame();
+    }
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      let delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      if (e.deltaMode === 1) delta *= 33;
+      else if (e.deltaMode === 2) delta *= 400;
+
+      frictionScrollerRef.current.addImpulse(delta, performance.now());
+      scheduleFrame();
+    };
+
+    scrollElement.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      isRunning = false;
+      scheduleFrameRef.current = null;
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      scrollElement.removeEventListener('wheel', handleWheel);
+    };
+  }, [expandedIndex]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollRef.current) return;
+    isDraggingRef.current = true;
+    startXRef.current = e.pageX;
+    lastXRef.current = e.pageX;
+    dragVelocityRef.current = 0;
+    lastTimeRef.current = performance.now();
+    startScrollRef.current = scrollRef.current.scrollLeft;
+    setDraggedDistance(0);
+    frictionScrollerRef.current.reset();
+    scheduleFrameRef.current?.();
+  };
+
   const handleMouseMove = (e: React.MouseEvent) => {
-    setCursorPos({ x: e.clientX, y: e.clientY });
+    if (!isDraggingRef.current || !scrollRef.current) return;
+    e.preventDefault();
+    const now = performance.now();
+    const dt = Math.max(now - lastTimeRef.current, 1);
+    const dx = e.pageX - lastXRef.current;
+
+    dragVelocityRef.current = dx / dt;
+    lastXRef.current = e.pageX;
+    lastTimeRef.current = now;
+
+    const walk = (e.pageX - startXRef.current) * 1.5;
+    const newPos = startScrollRef.current - walk;
+
+    scrollRef.current.scrollLeft = newPos;
+    targetScrollRef.current = newPos;
+    currentScrollRef.current = newPos;
+    setDraggedDistance(Math.abs(walk));
+
+    if (Math.abs(dragVelocityRef.current) > 1.2) {
+      frictionScrollerRef.current.addImpulse(-dx * 0.35);
+    }
+    scheduleFrameRef.current?.();
   };
 
-  // Keyboard escape for lightbox
+  const handleMouseUp = () => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    const flingVelocity = -dragVelocityRef.current * 18;
+    if (Math.abs(flingVelocity) > 2) {
+      frictionScrollerRef.current.releaseFling(flingVelocity);
+    }
+    scheduleFrameRef.current?.();
+  };
+
+  // Keyboard navigation
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && activeItem) {
-        setActiveItem(null);
+      if (expandedIndex === null) return;
+      if (e.key === 'Escape') {
+        setExpandedIndex(null);
+      } else if (e.key === 'ArrowRight') {
+        const nextIdx = (expandedIndex + 1) % infiniteItems.length;
+        setExpandedIndex(nextIdx);
+        centerCard(nextIdx);
+      } else if (e.key === 'ArrowLeft') {
+        const prevIdx = (expandedIndex - 1 + infiniteItems.length) % infiniteItems.length;
+        setExpandedIndex(prevIdx);
+        centerCard(prevIdx);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [activeItem]);
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      const strip = scrollRef.current;
-      if (!strip || strip.scrollWidth <= strip.clientWidth) return;
-
-      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-      if (delta === 0) return;
-
-      e.preventDefault();
-      strip.scrollLeft += delta;
-    };
-
-    root.addEventListener('wheel', handleWheel, { passive: false });
-    return () => root.removeEventListener('wheel', handleWheel);
-  }, []);
-
-  useEffect(() => {
-    const updateViewportHeight = () => setViewportHeight(window.innerHeight);
-    updateViewportHeight();
-    window.addEventListener('resize', updateViewportHeight);
-    return () => window.removeEventListener('resize', updateViewportHeight);
-  }, []);
+  }, [expandedIndex, infiniteItems.length, centerCard]);
 
   return (
     <div
-      ref={rootRef}
-      onMouseMove={handleMouseMove}
-      className="relative h-full min-h-0 w-full overflow-hidden px-5 pb-[3vh] pt-28 transition-colors duration-700 sm:pt-[clamp(10rem,18vh,16rem)]"
+      ref={containerRef}
+      className="relative w-full h-full max-h-screen overflow-hidden select-none"
       style={{
-        backgroundColor: ARCHIVE_BACKGROUND,
-        color: ARCHIVE_FOREGROUND,
+        backgroundColor: theme.bg,
+        color: theme.text,
       }}
     >
-      <div className="flex h-full w-full flex-col">
-        {/* Archive Title Bar */}
-        <div className="grid shrink-0 grid-cols-1 items-center gap-6 md:grid-cols-[56.6%_1fr]">
+      {/* ========================================================
+          TITLE ROW (Exact match to Brandon Yasin reference image)
+          - Left column: Giant lowercase "archive"
+          - Right column (aligned at 56.6% with MENU/CONTACT):
+            A CURATED SELECTION
+            OF WORK & EXPLORATIONS
+            2016—2026
+          - Sits in background layer (z-0)
+          ======================================================== */}
+      <div className="absolute top-0 left-0 right-0 z-0 pt-[clamp(5.5rem,13vh,10.5rem)] px-6 sm:px-10 lg:px-12 pointer-events-none">
+        <div className="grid grid-cols-1 md:grid-cols-[56.6%_1fr] items-start w-full">
+          {/* Left Column: archive */}
           <div>
             <h1
-              className="font-sans text-[clamp(7rem,6.5vw,14rem)] font-light leading-[0.82] tracking-[-0.05em] transition-colors duration-500"
-              style={{ color: ARCHIVE_FOREGROUND }}
+              className="font-sans text-[clamp(4.5rem,9.5vw,12rem)] font-light leading-[0.82] tracking-[-0.05em] transition-colors duration-500"
+              style={{ color: theme.text }}
             >
               archive
             </h1>
           </div>
 
-          <div className="flex flex-col items-start">
+          {/* Right Column: aligned with MENU/CONTACT column */}
+          <div className="flex flex-col justify-start pt-2 sm:pt-4">
             <div
-              className="font-sans text-base tracking-[0.04em] uppercase leading-[1.2]"
-              style={{ color: ARCHIVE_FOREGROUND }}
+              className="font-sans text-[11px] sm:text-[12px] font-normal tracking-[0.06em] uppercase leading-[1.38] transition-colors duration-500"
+              style={{ color: theme.text }}
             >
-              A curated selection<br />
-              of motion & visual explorations<br />
-              <span>2016—2026</span>
+              A CURATED SELECTION<br />
+              OF WORK &amp; EXPLORATIONS<br />
+              <span className="mt-3.5 block font-sans tracking-[0.06em]">2016—2026</span>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Gallery Content */}
+      {/* ========================================================
+          BOTTOM GALLERY STRIP WITH INLINE HERO CARD EXPANSION
+          - Spans the viewport height so expanding cards can reach
+            all the way up below the header/signature (exact match to image_2e70c37f.png)
+          - Items aligned to bottom baseline (`items-end`)
+          - Normal height: stripHeight (~44% of viewport)
+          - Clicked card height: expandedHeight (~viewportHeight - 56px)
+          - Smooth in-out transitions: cubic-bezier(0.65, 0, 0.35, 1)
+          - In-place expansion: does NOT jump sideways when clicked
+          - Clicking an expanded card shrinks it back to normal
+          - Clicking another card expands the new one smoothly
+          ======================================================== */}
+      <div
+        className="absolute inset-0 z-10 flex flex-col justify-end overflow-hidden"
+        onClick={(e) => {
+          // Clicking empty background collapses expanded card
+          if (e.target === e.currentTarget && draggedDistance < 8) {
+            setExpandedIndex(null);
+          }
+        }}
+      >
         <div
           ref={scrollRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
           tabIndex={0}
-          aria-label="Archive projects. Scroll horizontally to explore."
-          className="mt-[clamp(11rem,35vh,23.5rem)] flex w-full shrink-0 select-none gap-[9px] overflow-x-auto overscroll-x-contain py-3 no-scrollbar focus-visible:outline focus-visible:outline-1"
-          style={{ outlineColor: theme.accent }}
+          aria-label="Archive explorations gallery. Drag or scroll horizontally to explore. Click any card to expand."
+          className="w-full h-full no-scrollbar px-6 sm:px-10 lg:px-12 overflow-x-auto overflow-y-hidden cursor-grab active:cursor-grabbing focus-visible:outline-none"
         >
-            {items.map((item, index) => (
-              <MotionCard
-                key={item.id}
-                onClick={() => setActiveItem(item)}
-                onMouseEnter={() => setHoveredItem(item)}
-                onMouseLeave={() => setHoveredItem(null)}
-                delay={Math.min(index * motionTokens.stagger.tight, motionTokens.stagger.maximum)}
-                inView
-                once
-                amount={0.2}
-                lift={8}
-                className="group flex flex-shrink-0 cursor-pointer flex-col justify-between"
-                style={{
-                  width: `${Math.round(cardHeight * (mediaRatios[item.id] || 0.8))}px`,
-                }}
-              >
+          <div
+            ref={trackRef}
+            className="flex gap-[9px] items-end h-full pb-3 sm:pb-4 transform-gpu"
+            style={{ willChange: 'transform', transformOrigin: 'center bottom' }}
+          >
+            {infiniteItems.map((item, idx) => {
+              const isExpanded = expandedIndex === idx;
+              const ratio = mediaRatios[item.id] || DEFAULT_RATIOS[item.id] || 0.8;
+              const cardWidth = Math.round(stripHeight * ratio);
+              const cardExpandedWidth = Math.round(
+                Math.min(expandedHeight * ratio, viewportWidth * 0.88)
+              );
+
+              const currentWidth = isExpanded ? cardExpandedWidth : cardWidth;
+              const currentHeight = isExpanded ? expandedHeight : stripHeight;
+              const isHovered = hoveredIndex === idx;
+
+              return (
                 <div
-                  className="relative w-full overflow-hidden border shadow-none"
-                  style={{
-                    height: `${cardHeight}px`,
-                    backgroundColor: ARCHIVE_BACKGROUND,
-                    borderColor: `${ARCHIVE_FOREGROUND}1a`,
+                  key={`${item.id}-${idx}`}
+                  ref={(el) => {
+                    cardRefs.current[idx] = el;
                   }}
+                  onMouseEnter={() => setHoveredIndex(idx)}
+                  onMouseLeave={() => setHoveredIndex(null)}
+                  onClick={(e) => handleCardClick(idx, e)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={
+                    isExpanded
+                      ? `${item.title} (expanded). Click to minimize.`
+                      : `Expand ${item.title}`
+                  }
+                  title={isExpanded ? 'Click to minimize' : `${item.title}`}
+                  style={{
+                    width: `${currentWidth}px`,
+                    height: `${currentHeight}px`,
+                    transition:
+                      'width 650ms cubic-bezier(0.65, 0, 0.35, 1), height 650ms cubic-bezier(0.65, 0, 0.35, 1)',
+                    willChange: 'width, height',
+                  }}
+                  className={`group relative flex-shrink-0 overflow-hidden select-none bg-black transform-gpu ${
+                    isExpanded ? 'cursor-zoom-out z-20' : 'cursor-pointer hover:opacity-95'
+                  }`}
                 >
-                  {item.type === 'video' ? (
-                    <motion.video
-                      layoutId={`archive-media-${item.id}`}
+                  {/* Media Content */}
+                  {item.type === 'video' && (isExpanded || isHovered) ? (
+                    <video
                       src={item.src}
                       poster={item.poster}
                       autoPlay
                       loop
-                      muted
+                      muted={isMuted}
                       playsInline
-                      onLoadedMetadata={(event) =>
-                        setMediaRatio(item.id, event.currentTarget.videoWidth, event.currentTarget.videoHeight)
-                      }
-                      className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                      className="w-full h-full object-cover pointer-events-none"
                     />
                   ) : (
-                    <motion.img
-                      layoutId={`archive-media-${item.id}`}
-                      src={item.src}
+                    <img
+                      src={item.poster || item.src}
                       alt={item.title}
-                      loading="lazy"
-                      onLoad={(event) =>
-                        setMediaRatio(item.id, event.currentTarget.naturalWidth, event.currentTarget.naturalHeight)
-                      }
-                      className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                      loading={idx < 10 ? 'eager' : 'lazy'}
+                      decoding="async"
+                      onLoad={(e) => {
+                        handleMediaLoad(
+                          item.id,
+                          e.currentTarget.naturalWidth,
+                          e.currentTarget.naturalHeight
+                        );
+                      }}
+                      className="w-full h-full object-cover pointer-events-none"
                     />
                   )}
 
-                  <div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 motion-transition-opacity flex items-center justify-center"
-                    style={{ backgroundColor: `${theme.bg}80` }}
-                  >
-                    <span
-                      className="p-3 rounded-full border backdrop-blur-md"
-                      style={{
-                        backgroundColor: `${theme.bg}cc`,
-                        borderColor: `${theme.accent}66`,
-                        color: theme.accent,
-                      }}
+                  {/* Audio Mute/Unmute Toggle Button when expanded video */}
+                  {isExpanded && item.type === 'video' && (
+                    <div
+                      className="absolute bottom-4 right-4 z-30 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      <Maximize2 className="w-4 h-4" />
-                    </span>
-                  </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsMuted((m) => !m);
+                        }}
+                        className="p-2.5 rounded-full bg-black/60 backdrop-blur-md text-white/90 hover:text-white border border-white/10 transition-colors"
+                        title={isMuted ? 'Unmute' : 'Mute'}
+                      >
+                        {isMuted ? (
+                          <VolumeX className="w-4 h-4" />
+                        ) : (
+                          <Volume2 className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
-
-                <div
-                  className="pt-3 flex items-center justify-between text-[11px] font-mono tracking-widest uppercase"
-                style={{ color: ARCHIVE_FOREGROUND }}
-                >
-                  <span className="truncate pr-2 font-medium motion-transition-colors group-hover:text-[var(--primary)]">
-                    {item.title}
-                  </span>
-                  <span style={{ color: theme.accent }}>{item.number}</span>
-                </div>
-                <div
-                  className="text-[10px] font-mono tracking-wider uppercase truncate"
-                  style={{ color: theme.textMuted }}
-                >
-                  {item.category} · {item.year}
-                </div>
-              </MotionCard>
-            ))}
+              );
+            })}
+          </div>
         </div>
       </div>
-
-      {/* Floating Cursor Media Preview on Desktop */}
-      <AnimatePresence>
-        {hoveredItem && !activeItem && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{
-              opacity: 1,
-              scale: 1,
-              x: cursorPos.x + 18,
-              y: cursorPos.y - 120,
-            }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-            className="fixed top-0 left-0 pointer-events-none z-50 hidden xl:block w-48 overflow-hidden border backdrop-blur-md p-2 shadow-2xl"
-            style={{
-              borderColor: `${theme.accent}66`,
-              backgroundColor: `${theme.bg}e6`,
-            }}
-          >
-            <div className="w-full h-28 overflow-hidden mb-2" style={{ backgroundColor: theme.surface }}>
-              {hoveredItem.type === 'video' ? (
-                <video
-                  src={hoveredItem.src}
-                  poster={hoveredItem.poster}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <img
-                  src={hoveredItem.src}
-                  alt={hoveredItem.title}
-                  className="w-full h-full object-cover"
-                />
-              )}
-            </div>
-            <div
-              className="text-[10px] font-mono tracking-widest uppercase truncate"
-              style={{ color: theme.text }}
-            >
-              {hoveredItem.title}
-            </div>
-            <div className="text-[9px] font-mono uppercase" style={{ color: theme.accent }}>
-              {hoveredItem.category}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Fullscreen Lightbox Modal */}
-      {createPortal(
-        <AnimatePresence>
-          {activeItem && (
-            <MotionModalBackdrop
-              className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-8 backdrop-blur-xl"
-              style={{ backgroundColor: `${theme.bg}f2` }}
-              onClick={() => setActiveItem(null)}
-            >
-              <MotionButton
-                onClick={() => setActiveItem(null)}
-                className="absolute top-6 right-6 p-2 rounded-full border motion-transition-colors cursor-pointer z-10"
-                style={{
-                  borderColor: `${theme.text}33`,
-                  color: theme.text,
-                }}
-                title="Close (Esc)"
-              >
-                <X className="w-5 h-5" />
-              </MotionButton>
-
-              <MotionModalContent
-                onClick={(e) => e.stopPropagation()}
-                className="relative max-w-5xl w-full max-h-[85vh] flex flex-col overflow-hidden border"
-                style={{
-                  borderColor: `${theme.accent}4d`,
-                  backgroundColor: theme.surface,
-                }}
-              >
-                <div className="w-full flex-1 overflow-hidden bg-black flex items-center justify-center">
-                  {activeItem.type === 'video' ? (
-                    <motion.video
-                      layoutId={`archive-media-${activeItem.id}`}
-                      src={activeItem.src}
-                      poster={activeItem.poster}
-                      controls
-                      autoPlay
-                      loop
-                      playsInline
-                      className="max-h-[70vh] w-full object-contain"
-                    />
-                  ) : (
-                    <motion.img
-                      layoutId={`archive-media-${activeItem.id}`}
-                      src={activeItem.src}
-                      alt={activeItem.title}
-                      className="max-h-[70vh] w-full object-contain"
-                    />
-                  )}
-                </div>
-
-                <div
-                  className="p-5 flex items-center justify-between border-t"
-                  style={{
-                    borderColor: `${theme.text}1a`,
-                    backgroundColor: theme.bg,
-                  }}
-                >
-                  <div>
-                    <h3 className="text-lg font-sans" style={{ color: theme.text }}>
-                      {activeItem.title}
-                    </h3>
-                    <div
-                      className="text-[11px] font-mono tracking-widest uppercase"
-                      style={{ color: theme.textMuted }}
-                    >
-                      {activeItem.category} · {activeItem.year}
-                    </div>
-                  </div>
-                  <div className="font-mono text-sm" style={{ color: theme.accent }}>
-                    {activeItem.number}
-                  </div>
-                </div>
-              </MotionModalContent>
-            </MotionModalBackdrop>
-          )}
-        </AnimatePresence>,
-        document.body,
-      )}
     </div>
   );
 };

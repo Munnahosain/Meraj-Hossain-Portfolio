@@ -464,7 +464,7 @@ const LEGACY_ARCHIVE_ITEMS: ArchiveItem[] = [
   {
     id: 'arch-1',
     number: '01',
-    title: 'Kinetic Monolith',
+    title: 'Kinetic Monolith / Interior Reflection',
     category: '3D Simulation & Motion',
     year: '2024',
     type: 'video',
@@ -474,15 +474,52 @@ const LEGACY_ARCHIVE_ITEMS: ArchiveItem[] = [
   {
     id: 'arch-2',
     number: '02',
-    title: 'Editorial Motion Reel',
+    title: 'Editorial Motion Reel / Flora',
     category: 'Video Editing & Lookbook',
     year: '2023',
     type: 'image',
     src: '/assets/site/archive_02.Dm2AgCPJ.jpg',
   },
   {
-    id: 'arch-3',
+    id: 'arch-7',
     number: '03',
+    title: 'Tactile Packaging System',
+    category: 'Packaging Design',
+    year: '2022',
+    type: 'image',
+    src: '/assets/site/archive_07.CEWCwpke.jpg',
+  },
+  {
+    id: 'arch-bestseller',
+    number: '04',
+    title: 'Bestseller 50 Festival / Spatial Pavilion',
+    category: 'Spatial Identity',
+    year: '2023',
+    type: 'image',
+    src: '/assets/site/BESTSELLER.BwMYxazI.jpg',
+  },
+  {
+    id: 'arch-copenhagen',
+    number: '05',
+    title: 'Copenhagen Fashion Week',
+    category: 'Runway & Lookbook',
+    year: '2024',
+    type: 'image',
+    src: '/assets/site/COPENHAGEN_FASHION_WEEK.Cif1zX-w.jpg',
+  },
+  {
+    id: 'arch-6',
+    number: '06',
+    title: 'Spatial Kinetic Installation / Chrome 30',
+    category: 'Exhibition & VFX',
+    year: '2023',
+    type: 'video',
+    src: '/assets/site/archive_06.C5_Zp-eu.mp4',
+    poster: '/assets/site/archive_06_poster.Ct8863B4.jpg',
+  },
+  {
+    id: 'arch-3',
+    number: '07',
     title: 'Digital Platform Motion',
     category: 'UI Motion & Screen Design',
     year: '2024',
@@ -492,7 +529,7 @@ const LEGACY_ARCHIVE_ITEMS: ArchiveItem[] = [
   },
   {
     id: 'arch-4',
-    number: '04',
+    number: '08',
     title: 'Brand Identity Vector Marks',
     category: 'Graphic Design',
     year: '2022',
@@ -501,7 +538,7 @@ const LEGACY_ARCHIVE_ITEMS: ArchiveItem[] = [
   },
   {
     id: 'arch-5',
-    number: '05',
+    number: '09',
     title: 'Campaign Visuals & Posters',
     category: 'Advertising & Print',
     year: '2023',
@@ -509,27 +546,8 @@ const LEGACY_ARCHIVE_ITEMS: ArchiveItem[] = [
     src: '/assets/site/archive_05.CcLddY82.jpg',
   },
   {
-    id: 'arch-6',
-    number: '06',
-    title: 'Spatial Kinetic Installation',
-    category: 'Exhibition & VFX',
-    year: '2023',
-    type: 'video',
-    src: '/assets/site/archive_06.C5_Zp-eu.mp4',
-    poster: '/assets/site/archive_06_poster.Ct8863B4.jpg',
-  },
-  {
-    id: 'arch-7',
-    number: '07',
-    title: 'Tactile Packaging System',
-    category: 'Packaging Design',
-    year: '2022',
-    type: 'image',
-    src: '/assets/site/archive_07.CEWCwpke.jpg',
-  },
-  {
     id: 'arch-8',
-    number: '08',
+    number: '10',
     title: 'Digital Token 3D Asset',
     category: '3D Modeling & Motion',
     year: '2023',
@@ -612,15 +630,7 @@ const LEGACY_ARCHIVE_ITEMS: ArchiveItem[] = [
   },
 ];
 
-export const ARCHIVE_ITEMS: ArchiveItem[] = CASE_STUDIES.map((project, index) => ({
-  id: `archive-${project.id}`,
-  number: String(index + 1).padStart(2, '0'),
-  title: project.title.replace('\n', ' '),
-  category: project.category,
-  year: project.year,
-  type: 'image',
-  src: project.coverImage,
-}));
+export const ARCHIVE_ITEMS: ArchiveItem[] = LEGACY_ARCHIVE_ITEMS;
 
 export const MERAJ_PROFILE: MerajProfile = {
   name: 'Meraj Hossain',

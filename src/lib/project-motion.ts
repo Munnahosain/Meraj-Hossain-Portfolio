@@ -20,8 +20,8 @@ export type ProjectMotionEasing = [number, number, number, number];
 
 const easings: Record<'cinematic' | 'smooth' | 'minimal', ProjectMotionEasing> = {
   cinematic: [0.76, 0, 0.24, 1],
-  smooth: [0.2, 0, 0, 1],
-  minimal: [0.16, 1, 0.3, 1],
+  smooth: [0.65, 0, 0.35, 1],
+  minimal: [0.65, 0, 0.35, 1],
 };
 
 const sectionLayouts: ProjectSectionLayout[] = [

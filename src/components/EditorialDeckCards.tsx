@@ -225,7 +225,7 @@ export const EditorialDeckCards: React.FC<EditorialDeckCardsProps> = ({
               <img
                 src="/assets/site/BESTSELLER.BwMYxazI.jpg"
                 alt="Bestseller Archive"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-[cubic-bezier(0.65,0,0.35,1)]"
               />
             </div>
 
@@ -237,7 +237,7 @@ export const EditorialDeckCards: React.FC<EditorialDeckCardsProps> = ({
               <img
                 src="/assets/site/archive_02.Dm2AgCPJ.jpg"
                 alt="Editorial Lookbook"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-[cubic-bezier(0.65,0,0.35,1)]"
               />
             </div>
 
@@ -249,7 +249,7 @@ export const EditorialDeckCards: React.FC<EditorialDeckCardsProps> = ({
               <img
                 src="/assets/site/COPENHAGEN_FASHION_WEEK.Cif1zX-w.jpg"
                 alt="Copenhagen Fashion Week"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-[cubic-bezier(0.65,0,0.35,1)]"
               />
             </div>
           </div>
@@ -305,7 +305,7 @@ export const EditorialDeckCards: React.FC<EditorialDeckCardsProps> = ({
 
         {/* Lowercase Title "about" */}
         <div className="mt-3.5 mb-auto">
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-sans font-light tracking-tight lowercase leading-none group-hover:translate-x-1 transition-transform duration-300">
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-sans font-light tracking-tight lowercase leading-none group-hover:translate-x-1 transition-transform duration-400 ease-[cubic-bezier(0.65,0,0.35,1)]">
             about
           </h2>
         </div>

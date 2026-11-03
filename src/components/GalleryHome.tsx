@@ -39,6 +39,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const mediaRefs = useRef<(HTMLDivElement | null)[]>([]);
   const scheduleFrameRef = useRef<(() => void) | null>(null);
@@ -217,7 +218,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
       rafId = null;
       if (!isRunning) return;
       const now = performance.now();
-      const dt = now - lastTime;
+      const dt = Math.min(now - lastTime, 32);
       lastTime = now;
 
       // Step the spring physics engine: friction decay + momentum coasting + dynamic spring bounce
@@ -233,15 +234,9 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
         scrollElement.scrollLeft = physics.newScroll;
       }
 
-      // Drive physical spring scale purely on the vertical axis onto card DOM nodes.
-      const scaleVal = physics.dynamicScale;
-      const cards = cardRefs.current;
-      for (let i = 0; i < cards.length; i++) {
-        const cardEl = cards[i];
-        if (cardEl) {
-          cardEl.style.transform = `translate3d(0, 0, 0) scale(1, ${scaleVal})`;
-          cardEl.style.transformOrigin = 'center bottom';
-        }
+      // Drive physical spring scale on single track container for peak 60/120fps GPU performance
+      if (trackRef.current && introStage === 'interactive') {
+        trackRef.current.style.transform = `translate3d(0, 0, 0) scale(1, ${physics.dynamicScale})`;
       }
 
       const setWidth = setBlockWidthRef.current;
@@ -402,7 +397,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
                   className="absolute inset-0 w-full h-full will-change-transform"
                   style={{
                     transform: `translate3d(0, ${yPos}%, 0)`,
-                    transition: 'transform 320ms cubic-bezier(0.22, 1, 0.36, 1)',
+                    transition: 'transform 420ms cubic-bezier(0.65, 0, 0.35, 1)',
                     zIndex: stepIdx + 1,
                   }}
                 >
@@ -438,7 +433,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        className={`w-full no-scrollbar flex gap-2.5 sm:gap-3 px-4 sm:px-8 pt-2 sm:pt-3 items-stretch h-[75vh] sm:h-[78vh] md:h-[79vh] ${
+        className={`w-full no-scrollbar px-4 sm:px-8 pt-2 sm:pt-3 items-stretch h-[75vh] sm:h-[78vh] md:h-[79vh] ${
           introStage === 'interactive'
             ? isTransitioning
               ? 'overflow-x-auto pointer-events-none'
@@ -446,6 +441,11 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
             : 'overflow-hidden pointer-events-none'
         }`}
       >
+        <div
+          ref={trackRef}
+          className="flex gap-2.5 sm:gap-3 items-stretch h-full transform-gpu"
+          style={{ willChange: 'transform', transformOrigin: 'center bottom' }}
+        >
         {cases.length === 0 && (
           <div className="grid h-full w-full place-items-center px-6 text-center font-mono text-xs uppercase tracking-widest opacity-60">
             No projects are currently featured.
@@ -487,8 +487,8 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
             cardTransform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
             cardOpacity = 1;
             cardZIndex = 5;
-            const delay = Math.abs(itemIndexInSet - (isLeftGroup ? 2 : 3)) * 65;
-            cardTransition = `transform 980ms cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, opacity 600ms ease ${delay}ms`;
+            const delay = Math.abs(itemIndexInSet - (isLeftGroup ? 2 : 3)) * 75;
+            cardTransition = `transform 980ms cubic-bezier(0.65, 0, 0.35, 1) ${delay}ms, opacity 700ms cubic-bezier(0.65, 0, 0.35, 1) ${delay}ms`;
           } else {
             // Interactive state: physical spring engine directly updates vertical transforms at 60/120fps with zero CSS lag
             cardTransform = 'translate3d(0, 0, 0) scale(1, 1)';
@@ -545,9 +545,9 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
               }}
               className="group relative flex-shrink-0 w-[78vw] sm:w-[48vw] md:w-[35vw] lg:w-[26vw] max-w-[480px] h-full flex flex-col justify-between cursor-pointer transform-gpu select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#18C98A]"
             >
-              {/* Subtle Upward Card Lift on Hover: halka ekto upore uthbe (6px to 8px) without zooming image/video */}
+              {/* Subtle Upward Card Lift on Hover: smooth ease-in-out lift (6px to 8px) */}
               <div
-                className={`w-full h-full flex flex-col justify-between transition-transform duration-300 ease-out will-change-transform transform-gpu ${
+                className={`w-full h-full flex flex-col justify-between transition-transform duration-400 ease-[cubic-bezier(0.65,0,0.35,1)] will-change-transform transform-gpu ${
                   isHovered && !isIntroActive ? '-translate-y-1.5 sm:-translate-y-2' : 'translate-y-0'
                 }`}
               >
@@ -557,11 +557,11 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
                   style={{ color: theme.text }}
                 >
                   <div className="relative overflow-hidden h-[16px]">
-                    <div className="transition-transform duration-300 group-hover:-translate-y-full">
+                    <div className="transition-transform duration-380 ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:-translate-y-full">
                       <span>{item.title.replace('\n', ' ')}</span>
                     </div>
                     <div
-                      className="absolute top-0 left-0 transition-transform duration-300 translate-y-full group-hover:translate-y-0"
+                      className="absolute top-0 left-0 transition-transform duration-380 ease-[cubic-bezier(0.65,0,0.35,1)] translate-y-full group-hover:translate-y-0"
                       style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
                     >
                       <span>{item.title.replace('\n', ' ')}</span>
@@ -586,12 +586,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
                       loop
                       muted
                       playsInline
-                      preload="auto"
-                      ref={(videoEl) => {
-                        if (videoEl && videoEl.paused) {
-                          videoEl.play().catch(() => {});
-                        }
-                      }}
+                      preload="metadata"
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -599,6 +594,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
                       src={item.coverPoster || item.coverImage}
                       alt={item.title}
                       loading={idx < 6 ? 'eager' : 'lazy'}
+                      decoding="async"
                       className="w-full h-full object-cover"
                     />
                   )}
@@ -607,6 +603,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
             </div>
           );
         })}
+        </div>
       </div>
     </div>
   );

@@ -541,7 +541,7 @@ export default function App() {
           left: heroLeft,
           width: heroWidth,
           height: heroHeight,
-          backgroundColor: theme.bg, // Strict: NEVER changes color away from landing page!
+          backgroundColor: theme.bg,
           color: theme.text,
           borderRadius: '0px', // Strictly sharp 0px corners
           border: isMenuOpen ? `1px solid ${theme.border}` : '0px solid transparent',

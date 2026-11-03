@@ -760,7 +760,7 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
               height: sharedHeroSize?.height,
               visibility: isSharedHeroAnimating ? 'hidden' : 'visible',
               transform: `scale(${heroScale})`,
-              transition: 'transform 0.1s ease-out',
+              transition: 'transform 0.35s cubic-bezier(0.65, 0, 0.35, 1)',
             }}
             className="relative h-[58vh] min-h-[360px] max-h-[680px] w-full max-w-[480px] shrink-0 overflow-hidden border border-black/10 bg-[#16181e] shadow-none will-change-transform lg:col-span-5 lg:col-start-8 lg:row-span-2"
           >

@@ -1,18 +1,20 @@
 import type { Easing, Transition, Variants } from 'framer-motion';
 
 const easing = {
-  standard: [0.2, 0, 0, 1] as Easing,
-  enter: [0.16, 1, 0.3, 1] as Easing,
-  exit: [0.7, 0, 0.84, 0] as Easing,
+  // Smooth ease-in-out with gentle slow start, accelerating through the middle and gliding smoothly
+  standard: [0.65, 0, 0.35, 1] as Easing,
+  enter: [0.65, 0, 0.35, 1] as Easing,
+  exit: [0.65, 0, 0.35, 1] as Easing,
   menu: [0.76, 0, 0.24, 1] as Easing,
+  easeInOut: [0.65, 0, 0.35, 1] as Easing,
   linear: 'linear' as Easing,
 };
 
 export const motionEngineTokens = {
   gsap: {
-    pageExit: 'power2.in',
-    pageEnter: 'power3.out',
-    scrollReveal: 'power3.out',
+    pageExit: 'power2.inOut',
+    pageEnter: 'power2.inOut',
+    scrollReveal: 'power2.inOut',
   },
 } as const;
 
