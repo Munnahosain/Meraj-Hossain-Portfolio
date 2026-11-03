@@ -4,9 +4,11 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, useTransform, type MotionValue } from 'framer-motion';
+import { AnimatePresence, motion, useTransform, type MotionValue } from 'framer-motion';
 import { MerajProfile, TimeTheme } from '../types';
 import { MotionButton } from './motion/MotionPrimitives';
+import { Magnetic } from './motion/Magnetic';
+import { motionTokens } from '../lib/motion';
 
 interface HeaderProps {
   persona: MerajProfile;
@@ -29,7 +31,43 @@ interface HeaderProps {
   theme: TimeTheme;
   onScrubStateChange?: (isScrubbing: boolean) => void;
   deckRepelX?: MotionValue<number>;
+  /** Hold the entrance animation until the page loader has lifted. */
+  isBooted?: boolean;
 }
+
+/**
+ * Two stacked copies of a label: the second (accent colour) rolls up on hover.
+ * When `text` changes (MENU → CLOSE) the new word slides in from below.
+ */
+const RollLabel: React.FC<{ text: string; hoverColor: string; height: number }> = ({
+  text,
+  hoverColor,
+  height,
+}) => {
+  const swap = (
+    <AnimatePresence mode="popLayout" initial={false}>
+      <motion.span
+        key={text}
+        className="block whitespace-nowrap"
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '-100%' }}
+        transition={{ duration: 0.45, ease: motionTokens.easing.standard }}
+      >
+        {text}
+      </motion.span>
+    </AnimatePresence>
+  );
+
+  return (
+    <div className="text-roll-window relative overflow-hidden" style={{ height }}>
+      <div className="text-roll-current relative">{swap}</div>
+      <div className="text-roll-next absolute top-0 left-0" style={{ color: hoverColor }}>
+        <div className="relative">{swap}</div>
+      </div>
+    </div>
+  );
+};
 
 export const Header: React.FC<HeaderProps> = ({
   persona,
@@ -52,6 +90,7 @@ export const Header: React.FC<HeaderProps> = ({
   theme,
   onScrubStateChange,
   deckRepelX,
+  isBooted = true,
 }) => {
   const [signatureHovered, setSignatureHovered] = useState(false);
   const [isDraggingClock, setIsDraggingClock] = useState(false);
@@ -93,6 +132,7 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   useEffect(() => {
+    if (!isBooted) return;
     // Reveal text lines from bottom to top
     const loadTimer = setTimeout(() => {
       setIsLoaded(true);
@@ -104,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({
       clearTimeout(loadTimer);
       cleanupSig();
     };
-  }, [startSignatureDraw]);
+  }, [isBooted, startSignatureDraw]);
 
   // Click on signature re-runs the pen drawing animation
   const handleSignatureClick = () => {
@@ -188,10 +228,14 @@ export const Header: React.FC<HeaderProps> = ({
     if (isDraggingClock) {
       window.addEventListener('pointermove', handlePointerMove);
       window.addEventListener('pointerup', handlePointerUp);
+      // A cancelled gesture (system dialog, touch takeover) must also release the
+      // drag, otherwise the theme transition stays disabled until the next tap.
+      window.addEventListener('pointercancel', handlePointerUp);
     }
     return () => {
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
     };
   }, [isDraggingClock, currentHour, onScrubStateChange]);
 
@@ -205,6 +249,23 @@ export const Header: React.FC<HeaderProps> = ({
       onTimeChange(23.0); // Switch to Night
     } else {
       onResetTime(); // Reset to live
+    }
+  };
+
+  // Keyboard access for the dial: arrows nudge by 15 minutes, Home/End return to live time.
+  const handleDialKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = event.shiftKey ? 1 : 0.25;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      onTimeChange((((currentHour + step) % 24) + 24) % 24);
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      onTimeChange((((currentHour - step) % 24) + 24) % 24);
+    } else if (event.key === 'Home' || event.key === 'End' || event.key === 'Escape') {
+      if (isTimeOffset) {
+        event.preventDefault();
+        onResetTime();
+      }
     }
   };
 
@@ -348,72 +409,75 @@ export const Header: React.FC<HeaderProps> = ({
         </motion.div>
 
         {/* Right: Stacked MENU / CONTACT & Architectural Reference Clock Widget */}
-        <div
-          className={`pointer-events-none absolute inset-0 motion-transition-opacity ${
-            isMenuOpen ? 'pointer-events-none opacity-0' : 'opacity-100'
-          }`}
-        >
-          {/* Stacked MENU / CONTACT with Bottom-to-Top Text Reveal & Rolling Hover Animation */}
+        <div className="pointer-events-none absolute inset-0">
+          {/* Stacked MENU / CONTACT with Bottom-to-Top Text Reveal & Rolling Hover Animation.
+              While the menu is open the first row turns into CLOSE; CONTACT and the clock step aside. */}
           <nav
             className="pointer-events-auto absolute top-[-9px] left-[56.6%] flex flex-col font-sans font-normal uppercase leading-[1.3] text-[12px] tracking-[0.14em] transition-colors duration-500"
             style={{ color: navTextColor }}
+            aria-label="Primary"
           >
-            <div className="overflow-hidden">
-              <div
-                className={`transition-transform duration-700 ease-[cubic-bezier(0.65,0,0.35,1)] ${
-                  isLoaded ? 'translate-y-0' : 'translate-y-[115%]'
-                }`}
-                style={{ transitionDelay: '300ms' }}
-              >
-                <MotionButton
-                  onClick={onToggleMenu || onOpenMenu}
-                  className="group/menu relative block cursor-pointer text-left select-none"
-                >
-                  <div className="text-roll-window relative overflow-hidden h-[16px]">
-                    <div className="text-roll-current">
-                      <span>{isMenuOpen ? 'CLOSE ✕' : 'MENU'}</span>
-                    </div>
-                    <div
-                      className="text-roll-next absolute top-0 left-0"
-                      style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
-                    >
-                      <span>{isMenuOpen ? 'CLOSE ✕' : 'MENU'}</span>
-                    </div>
-                  </div>
-                </MotionButton>
-              </div>
-            </div>
-            {!isMenuOpen && (
+            <Magnetic strength={0.4}>
               <div className="overflow-hidden">
                 <div
                   className={`transition-transform duration-700 ease-[cubic-bezier(0.65,0,0.35,1)] ${
                     isLoaded ? 'translate-y-0' : 'translate-y-[115%]'
                   }`}
-                  style={{ transitionDelay: '380ms' }}
+                  style={{ transitionDelay: '300ms' }}
                 >
                   <MotionButton
-                    onClick={onOpenContact}
-                    className="group/contact relative block cursor-pointer text-left select-none mt-[1px]"
+                    onClick={onToggleMenu || onOpenMenu}
+                    aria-expanded={isMenuOpen}
+                    aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+                    className="group/menu relative block cursor-pointer text-left select-none"
                   >
-                    <div className="text-roll-window relative overflow-hidden h-[16px]">
-                      <div className="text-roll-current">
-                        <span>CONTACT</span>
-                      </div>
-                      <div
-                        className="text-roll-next absolute top-0 left-0"
-                        style={{ color: theme.isLight ? '#0B8A5A' : '#34EEA0' }}
-                      >
-                        <span>CONTACT</span>
-                      </div>
-                    </div>
+                    <RollLabel
+                      text={isMenuOpen ? 'CLOSE ✕' : 'MENU'}
+                      hoverColor={theme.isLight ? '#0B8A5A' : '#34EEA0'}
+                      height={16}
+                    />
                   </MotionButton>
                 </div>
               </div>
-            )}
+            </Magnetic>
+            <div
+              inert={isMenuOpen}
+              aria-hidden={isMenuOpen}
+              className={`transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.65,0,0.35,1)] ${
+                isMenuOpen ? 'pointer-events-none -translate-y-1.5 opacity-0' : 'translate-y-0 opacity-100'
+              }`}
+            >
+              <Magnetic strength={0.4}>
+                <div className="overflow-hidden">
+                  <div
+                    className={`transition-transform duration-700 ease-[cubic-bezier(0.65,0,0.35,1)] ${
+                      isLoaded ? 'translate-y-0' : 'translate-y-[115%]'
+                    }`}
+                    style={{ transitionDelay: '380ms' }}
+                  >
+                    <MotionButton
+                      onClick={onOpenContact}
+                      className="group/contact relative block cursor-pointer text-left select-none mt-[1px]"
+                    >
+                      <RollLabel
+                        text="CONTACT"
+                        hoverColor={theme.isLight ? '#0B8A5A' : '#34EEA0'}
+                        height={16}
+                      />
+                    </MotionButton>
+                  </div>
+                </div>
+              </Magnetic>
+            </div>
           </nav>
 
           {/* Minimalist Clock Widget: Exact match to Reference Images */}
-          <div className="pointer-events-auto absolute right-0 flex items-start gap-[5px] top-12 lg:top-px">
+          <div
+            inert={isMenuOpen}
+            className={`absolute right-0 flex items-start gap-[5px] top-12 lg:top-px transition-opacity duration-500 ease-[cubic-bezier(0.65,0,0.35,1)] ${
+              isMenuOpen ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100'
+            }`}
+          >
             {/* Left of Dial: TIME TRAVEL ✕ and HH  .mm */}
             <div
               className="relative flex flex-col items-end text-right font-sans font-normal uppercase leading-[1.3] -top-3 text-[12px] tracking-[0.14em] transition-colors duration-500"
@@ -440,7 +504,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <span className="opacity-80 tracking-[0.14em]">LOCAL TIME</span>
                   )}
                 </div>
-                </div>
+              </div>
 
               <div className="overflow-hidden">
                 <div
@@ -468,34 +532,44 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
               style={{ transitionDelay: '480ms' }}
             >
-              <div
-                ref={dialRef}
-                onPointerDown={handlePointerDown}
-                className="group relative rounded-full border border-solid cursor-grab active:cursor-grabbing flex items-center justify-center select-none touch-none motion-transition-transform hover:scale-110 active:scale-105 h-[48px] w-[48px] sm:h-[52px] sm:w-[52px]"
-                style={{
-                  borderColor: navTextColor,
-                  backgroundColor: 'transparent',
-                }}
-                title="Drag to travel time: Top (12:00) → Right (3:00) → Bottom (6:00) → Left (9:00)"
-              >
-                {/* Rotating Indicator: Exactly one inner circle orbiting inside the outer circle */}
+              <Magnetic strength={0.18} radius={36}>
                 <div
-                  className={`absolute inset-0 flex items-start justify-center ${
-                    isDraggingClock ? 'transition-none' : 'transition-transform duration-150 ease-out'
-                  }`}
+                  ref={dialRef}
+                  onPointerDown={handlePointerDown}
+                  onKeyDown={handleDialKeyDown}
+                  role="slider"
+                  tabIndex={0}
+                  aria-label="Time of day"
+                  aria-valuemin={0}
+                  aria-valuemax={24}
+                  aria-valuenow={Number(currentHour.toFixed(2))}
+                  aria-valuetext={displayTime.replace(/\s+/g, '')}
+                  className="group relative rounded-full border border-solid cursor-grab active:cursor-grabbing flex items-center justify-center select-none touch-none motion-transition-transform hover:scale-110 active:scale-105 h-[48px] w-[48px] sm:h-[52px] sm:w-[52px]"
                   style={{
-                    transform: `rotate(${angleDeg}deg)`,
+                    borderColor: navTextColor,
+                    backgroundColor: 'transparent',
                   }}
+                  title="Drag to travel time (arrow keys also work): Top (12:00) → Right (3:00) → Bottom (6:00) → Left (9:00)"
                 >
-                  {/* Inner Circle: Clean hollow circular ring */}
+                  {/* Rotating Indicator: Exactly one inner circle orbiting inside the outer circle */}
                   <div
-                    className="w-[8px] h-[8px] sm:w-[9px] sm:h-[9px] rounded-full mt-[4px] border-[1.5px] border-solid bg-transparent motion-transition-colors"
+                    className={`absolute inset-0 flex items-start justify-center ${
+                      isDraggingClock ? 'transition-none' : 'transition-transform duration-300 ease-[cubic-bezier(0.65,0,0.35,1)]'
+                    }`}
                     style={{
-                      borderColor: navTextColor,
+                      transform: `rotate(${angleDeg}deg)`,
                     }}
-                  />
+                  >
+                    {/* Inner Circle: Clean hollow circular ring */}
+                    <div
+                      className="w-[8px] h-[8px] sm:w-[9px] sm:h-[9px] rounded-full mt-[4px] border-[1.5px] border-solid bg-transparent motion-transition-colors"
+                      style={{
+                        borderColor: navTextColor,
+                      }}
+                    />
+                  </div>
                 </div>
-              </div>
+              </Magnetic>
             </div>
           </div>
         </div>

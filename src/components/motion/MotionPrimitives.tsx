@@ -181,6 +181,25 @@ export function MotionTabPanel(props: MotionDivProps) {
   );
 }
 
+/**
+ * Wrap the active view in AnimatePresence (mode="wait") and key it by view so
+ * switching home / archive / about / case fades the old one out before the
+ * new one rises in. Pass `custom="instant"` to AnimatePresence to skip the exit.
+ */
+export function ViewTransition(props: MotionDivProps) {
+  const shouldReduceMotion = useReducedMotion();
+
+  return (
+    <motion.div
+      {...props}
+      variants={shouldReduceMotion ? reducedMotionVariants : motionVariants.view}
+      initial={shouldReduceMotion ? false : 'hidden'}
+      animate="visible"
+      exit="exit"
+    />
+  );
+}
+
 export function MotionDropdown(props: MotionDivProps) {
   const shouldReduceMotion = useReducedMotion();
 

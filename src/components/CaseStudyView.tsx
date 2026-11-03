@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useLayoutEffect } from 'react';
 import { CaseStudy, ProjectSection, TimeTheme } from '../types';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion, useScroll, useSpring } from 'framer-motion';
 import { useLenis } from '../hooks/useLenis';
 import { ProjectShutterImage } from './ProjectShutterImage';
 import {
@@ -552,8 +552,10 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
   const row1Ref = useRef<HTMLDivElement>(null);
   const row2Ref = useRef<HTMLDivElement>(null);
 
-  const [heroScale, setHeroScale] = useState(1);
   const reduceMotion = useReducedMotion();
+  const { scrollYProgress } = useScroll({ container: containerRef });
+  const progressScale = useSpring(scrollYProgress, { stiffness: 140, damping: 28, mass: 0.4 });
+  const mediaList = caseStudy.contentMedia ?? [];
   const animationSettings = getProjectAnimationSettings(caseStudy);
   const animationEasing = getProjectMotionEasing(caseStudy);
   const presentationTheme: TimeTheme = {
@@ -567,7 +569,7 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
     accent: '#16845f',
     isLight: true,
   };
-  const fallbackStorySections: ProjectSection[] = caseStudy.contentMedia.map((media, index) => ({
+  const fallbackStorySections: ProjectSection[] = mediaList.map((media, index) => ({
     id: `existing-media-${index}`,
     layout: index % 2 === 0 ? 'image-left' : 'image-right',
     heading: media.caption,
@@ -580,8 +582,8 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
   }));
   const useStorySections =
     Boolean(caseStudy.sections?.length) ||
-    (caseStudy.contentMedia.length > 0 &&
-      caseStudy.contentMedia.every((media) => media.type === 'image'));
+    (mediaList.length > 0 &&
+      mediaList.every((media) => media.type === 'image'));
   const storySections = (caseStudy.sections?.length
     ? caseStudy.sections
     : fallbackStorySections
@@ -599,7 +601,7 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
     if (containerRef.current) {
       containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    setHeroScale(1);
+    if (heroMediaRef.current) heroMediaRef.current.style.transform = '';
   }, [caseStudy.id]);
 
   useLayoutEffect(() => {
@@ -631,12 +633,19 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
     const el = containerRef.current;
     if (!el) return;
 
-    const handleScroll = () => {
-      const scrollY = el.scrollTop;
-      // Gently scale down hero image from 1.0 to 0.96 as user scrolls first 600px
-      const scale = Math.max(0.955, 1 - (scrollY / 1400) * 0.05);
-      setHeroScale(scale);
+    let frame = 0;
+    const apply = () => {
+      frame = 0;
+      // Gently scale the hero from 1.0 to 0.955 over the first ~1400px, written
+      // straight to the element so scrolling never triggers a React render.
+      const scale = Math.max(0.955, 1 - (el.scrollTop / 1400) * 0.05);
+      if (heroMediaRef.current && !reduceMotion) {
+        heroMediaRef.current.style.transform = `scale(${scale})`;
+      }
       updateScrollDepthFrames(el, Boolean(reduceMotion));
+    };
+    const handleScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(apply);
     };
 
     handleScroll();
@@ -650,11 +659,19 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
     resizeObserver?.observe(el);
 
     return () => {
+      if (frame) window.cancelAnimationFrame(frame);
       el.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleScroll);
       resizeObserver?.disconnect();
     };
   }, [reduceMotion]);
+
+  // `autoPlay` only fires when the element is inserted; start the hero video once the
+  // shared-element animation hands the real one over.
+  useEffect(() => {
+    if (isSharedHeroAnimating) return;
+    heroMediaRef.current?.querySelector('video')?.play().catch(() => {});
+  }, [isSharedHeroAnimating, caseStudy.id]);
 
   // Generic horizontal drag-to-scroll handler for filmstrips
   const setupDragScroll = (trackRef: React.RefObject<HTMLDivElement | null>) => {
@@ -721,15 +738,22 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
         color: presentationTheme.text,
       }}
     >
+      <div className="pointer-events-none sticky top-0 z-30 h-0" aria-hidden="true">
+        <motion.div
+          className="h-[2px] origin-left bg-[#16845f]"
+          style={{ scaleX: progressScale }}
+        />
+      </div>
+
       <div className="mx-auto max-w-[1720px] px-5 sm:px-10 lg:px-14">
         {/* Back Link */}
         <div className="mb-12">
           <button
             onClick={onBack}
-            className="group flex items-center gap-2 font-mono text-[10px] tracking-[0.18em] uppercase transition-colors cursor-pointer"
+            className="group flex items-center gap-2 font-mono text-[10px] tracking-[0.18em] uppercase transition-colors duration-300 ease-[cubic-bezier(0.65,0,0.35,1)] cursor-pointer"
             style={{ color: presentationTheme.textMuted }}
           >
-            <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
+            <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform duration-300 ease-[cubic-bezier(0.65,0,0.35,1)]" />
             <span className="group-hover:text-[#16845f]">Back to All Cases</span>
           </button>
         </div>
@@ -738,7 +762,7 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
           className="grid grid-cols-1 items-start gap-x-8 gap-y-8 border-b pb-14 sm:pb-20 lg:grid-cols-12 lg:gap-x-12"
           style={{ borderColor: presentationTheme.border }}
         >
-          <div className="pt-2 lg:col-span-6 lg:pt-10">
+          <div className="pt-2 lg:col-span-6 lg:col-start-1 lg:row-start-1 lg:pt-10">
             <p className="mb-5 font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: presentationTheme.textMuted }}>
               {caseStudy.client} <span className="px-2 text-[#16845f]">/</span> {caseStudy.year}
             </p>
@@ -759,10 +783,9 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
               width: sharedHeroSize?.width,
               height: sharedHeroSize?.height,
               visibility: isSharedHeroAnimating ? 'hidden' : 'visible',
-              transform: `scale(${heroScale})`,
               transition: 'transform 0.35s cubic-bezier(0.65, 0, 0.35, 1)',
             }}
-            className="relative h-[58vh] min-h-[360px] max-h-[680px] w-full max-w-[480px] shrink-0 overflow-hidden border border-black/10 bg-[#16181e] shadow-none will-change-transform lg:col-span-5 lg:col-start-8 lg:row-span-2"
+            className="relative h-[58vh] min-h-[360px] max-h-[680px] w-full max-w-[480px] shrink-0 overflow-hidden border border-black/10 bg-[#16181e] shadow-none will-change-transform lg:col-span-5 lg:col-start-8 lg:row-start-1 lg:row-span-2"
           >
             {caseStudy.coverVideo ? (
               <video
@@ -785,7 +808,7 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
             )}
           </div>
 
-          <div className="min-w-0 pt-1 lg:col-span-4 lg:col-start-8 lg:row-start-2 lg:pt-0">
+          <div className="min-w-0 pt-1 lg:col-span-6 lg:col-start-1 lg:row-start-2 lg:pt-0">
             <p
               className="max-w-xl text-sm font-light leading-7 sm:text-base sm:leading-8"
               style={{ color: presentationTheme.textMuted }}
@@ -852,7 +875,7 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
             />
           ) : (
             <div className="space-y-16 sm:space-y-24 my-16">
-              {caseStudy.contentMedia.map((media, idx) => (
+              {mediaList.map((media, idx) => (
               <div key={idx} className={`space-y-3 ${idx % 3 === 1 ? 'lg:ml-[16.666%] lg:w-5/6' : idx % 3 === 2 ? 'lg:mr-[16.666%] lg:w-5/6' : 'w-full'}`}>
               <ScrollDepthFrame direction={idx % 2 === 0 ? 1 : -1}>
               <div className="relative w-full overflow-hidden border border-black/10 bg-[#e8e5de] shadow-none">
@@ -902,7 +925,7 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
             {/* Row 1 Track */}
             <div
               ref={row1Ref}
-              className="w-full overflow-x-auto no-scrollbar flex gap-4 py-2 select-none cursor-grab"
+              data-cursor="drag" className="w-full overflow-x-auto no-scrollbar flex gap-4 py-2 select-none cursor-grab"
             >
               {caseStudy.scrollGalleryRow1.map((src, i) => (
                 <div
@@ -913,7 +936,7 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
                     src={src}
                     alt={`Screen Row 1 - ${i + 1}`}
                     loading="lazy"
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-700 ease-[cubic-bezier(0.65,0,0.35,1)]"
                   />
                 </div>
               ))}
@@ -923,7 +946,7 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
             {caseStudy.scrollGalleryRow2 && (
               <div
                 ref={row2Ref}
-                className="w-full overflow-x-auto no-scrollbar flex gap-4 py-2 select-none cursor-grab"
+                data-cursor="drag" className="w-full overflow-x-auto no-scrollbar flex gap-4 py-2 select-none cursor-grab"
               >
                 {caseStudy.scrollGalleryRow2.map((src, i) => (
                   <div
@@ -934,7 +957,7 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
                       src={src}
                       alt={`Screen Row 2 - ${i + 1}`}
                       loading="lazy"
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-700 ease-[cubic-bezier(0.65,0,0.35,1)]"
                     />
                   </div>
                 ))}
@@ -952,6 +975,7 @@ export const CaseStudyView: React.FC<CaseStudyViewProps> = ({
               </span>
               <button
                 onClick={() => onSelectCase(nextCase)}
+                data-cursor="next"
                 className="text-4xl sm:text-6xl font-sans font-light tracking-tight hover:text-[#18C98A] transition-colors text-left flex items-center gap-4 group cursor-pointer"
                 style={{ color: presentationTheme.text }}
               >

@@ -15,6 +15,9 @@
     --motion-ease-enter: cubic-bezier(0.65, 0, 0.35, 1);
     --motion-ease-exit: cubic-bezier(0.65, 0, 0.35, 1);
     --motion-ease-menu: cubic-bezier(0.76, 0, 0.24, 1);
+    --motion-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --accent: #18c98a;
     --motion-distance-small: 8px;
     --motion-distance-medium: 16px;
     --motion-distance-large: 24px;
@@ -112,7 +115,135 @@ html.admin-scroll body {
   transform: translateY(0);
 }
 
+/* ------------------------------------------------------------------ */
+/* Focus: one consistent, visible ring for keyboard users              */
+/* ------------------------------------------------------------------ */
+:where(a, button, input, textarea, select, [role="button"], [role="checkbox"], [role="slider"], [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Loading: skeleton shimmer + image fade-in                           */
+/* ------------------------------------------------------------------ */
+.skeleton {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: color-mix(in srgb, currentColor 7%, transparent);
+  transition: opacity 500ms var(--motion-ease-in-out);
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, currentColor 11%, transparent),
+    transparent
+  );
+  animation: skeleton-sweep 1.5s var(--motion-ease-in-out) infinite;
+}
+
+.skeleton[data-hidden="true"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.skeleton[data-hidden="true"]::after {
+  animation: none;
+}
+
+@keyframes skeleton-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.img-fade {
+  opacity: 0;
+  transform: scale(1.04);
+  filter: blur(10px);
+  transition:
+    opacity 700ms var(--motion-ease-in-out),
+    transform 1000ms var(--motion-ease-in-out),
+    filter 700ms var(--motion-ease-in-out);
+}
+
+.img-fade[data-loaded="true"] {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Custom cursor: only hide the native pointer where we replace it     */
+/* ------------------------------------------------------------------ */
+html.has-custom-cursor [data-cursor],
+html.has-custom-cursor [data-cursor] * {
+  cursor: none !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Menu deck: hovering one card dims the others                        */
+/* ------------------------------------------------------------------ */
+[data-deck-card] {
+  transition: filter 450ms var(--motion-ease-in-out);
+}
+
+[data-menu-open="true"][data-deck-hover="archive"] [data-deck-card]:not([data-deck-card="archive"]),
+[data-menu-open="true"][data-deck-hover="about"] [data-deck-card]:not([data-deck-card="about"]),
+[data-menu-open="true"][data-deck-hover="cases"] [data-deck-card]:not([data-deck-card="cases"]) {
+  filter: brightness(0.78) saturate(0.6);
+}
+
+/* ------------------------------------------------------------------ */
+/* Form fields: underline that draws in on focus                       */
+/* ------------------------------------------------------------------ */
+.field-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 480ms var(--motion-ease-in-out);
+  pointer-events: none;
+}
+
+.field:focus-within .field-bar {
+  transform: scaleX(1);
+}
+
+/* Animated underline for text links */
+.link-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: background-size 420ms var(--motion-ease-in-out);
+}
+
+.link-underline:hover,
+.link-underline:focus-visible {
+  background-size: 100% 1px;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
+
+  .img-fade {
+    transform: none;
+    filter: none;
+  }
+
   *,
   *::before,
   *::after {

@@ -7,6 +7,8 @@ declare module '@barba/core' {
   interface BarbaTransition {
     name?: string;
     leave?: (data: BarbaTransitionData) => unknown;
+    beforeEnter?: (data: BarbaTransitionData) => unknown;
+    enter?: (data: BarbaTransitionData) => unknown;
     afterEnter?: (data: BarbaTransitionData) => unknown;
   }
 

@@ -21,6 +21,7 @@ const dataDir = process.env.PORTFOLIO_DATA_DIR
   : seedDataDir;
 const dataFile = path.join(dataDir, 'portfolio.json');
 const mediaFile = path.join(dataDir, 'media.json');
+const messagesFile = path.join(dataDir, 'messages.json');
 const seedPortfolioFile = path.join(seedDataDir, 'portfolio.json');
 const distDir = path.join(rootDir, 'dist');
 const defaultData: PortfolioData = {
@@ -119,6 +120,7 @@ function hasAdminSession(request: Request) {
 
 const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '8mb' }));
 
 app.get('/api/portfolio', (request, response) => {
@@ -310,9 +312,120 @@ app.delete('/api/admin/media/:id', requireAdmin, async (request, response) => {
   }
 });
 
+// ---- Contact form -------------------------------------------------------
+const contactHits = new Map<string, number[]>();
+const contactWindowMs = 10 * 60 * 1000;
+const contactMaxPerWindow = 5;
+
+function contactRateLimited(ip: string) {
+  const now = Date.now();
+  const recent = (contactHits.get(ip) ?? []).filter((time) => now - time < contactWindowMs);
+  if (recent.length >= contactMaxPerWindow) {
+    contactHits.set(ip, recent);
+    return true;
+  }
+  recent.push(now);
+  contactHits.set(ip, recent);
+  if (contactHits.size > 5000) {
+    for (const [key, times] of contactHits) {
+      if (times.every((time) => now - time >= contactWindowMs)) contactHits.delete(key);
+    }
+  }
+  return false;
+}
+
+const clip = (value: unknown, max: number) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
+
+let messagesWrite: Promise<void> = Promise.resolve();
+
+app.post('/api/contact', async (request, response) => {
+  const body = (request.body ?? {}) as Record<string, unknown>;
+
+  // Honeypot: bots fill the hidden field. Pretend it worked so they move on.
+  if (clip(body.website, 200)) {
+    response.json({ ok: true });
+    return;
+  }
+  if (contactRateLimited(request.ip ?? 'unknown')) {
+    response.status(429).json({ error: 'Too many messages. Please try again later.' });
+    return;
+  }
+
+  const name = clip(body.name, 120);
+  const email = clip(body.email, 200);
+  if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    response.status(400).json({ error: 'A name and a valid email are required.' });
+    return;
+  }
+
+  const entry = {
+    id: randomBytes(8).toString('hex'),
+    receivedAt: new Date().toISOString(),
+    kind: body.kind === 'talent' ? 'talent' : 'client',
+    name,
+    email,
+    company: clip(body.company, 200),
+    timeline: clip(body.timeline, 200),
+    message: clip(body.message, 4000),
+    discipline: clip(body.discipline, 200),
+    portfolio: clip(body.portfolio, 500),
+    format: clip(body.format, 100),
+    budget: clip(body.budget, 100),
+    scopes: Array.isArray(body.scopes)
+      ? body.scopes.slice(0, 12).map((item) => clip(item, 80)).filter(Boolean)
+      : [],
+  };
+
+  try {
+    // Serialise writes so two simultaneous messages can't overwrite each other.
+    messagesWrite = messagesWrite.then(async () => {
+      let existing: unknown[] = [];
+      try {
+        const parsed = JSON.parse(await readFile(messagesFile, 'utf8'));
+        if (Array.isArray(parsed)) existing = parsed;
+      } catch (error) {
+        if (!isMissingFile(error)) throw error;
+      }
+      await mkdir(dataDir, { recursive: true });
+      await writeFile(messagesFile, JSON.stringify([entry, ...existing].slice(0, 1000), null, 2));
+    });
+    await messagesWrite;
+    response.json({ ok: true });
+  } catch (error) {
+    messagesWrite = Promise.resolve();
+    console.error('Saving contact message failed:', error);
+    response.status(500).json({ error: 'Could not save your message.' });
+  }
+});
+
+app.get('/api/admin/messages', requireAdmin, async (_request, response) => {
+  try {
+    response.json(JSON.parse(await readFile(messagesFile, 'utf8')));
+  } catch (error) {
+    if (isMissingFile(error)) {
+      response.json([]);
+      return;
+    }
+    console.error('Reading contact messages failed:', error);
+    response.status(500).json({ error: 'Could not read messages.' });
+  }
+});
+
 const isProduction = process.argv.includes('--production') || process.env.NODE_ENV === 'production';
 if (isProduction) {
-  app.use(express.static(distDir));
+  app.use(
+    express.static(distDir, {
+      setHeaders(res, filePath) {
+        // Hashed build output is immutable; HTML must always revalidate.
+        res.setHeader(
+          'Cache-Control',
+          /[\\/]assets[\\/].+\.[A-Za-z0-9_-]{8}\.(js|css)$/.test(filePath)
+            ? 'public, max-age=31536000, immutable'
+            : 'no-cache',
+        );
+      },
+    }),
+  );
   app.get('*', (_request, response) => response.sendFile(path.join(distDir, 'index.html')));
 } else {
   const { createServer } = await import('vite');

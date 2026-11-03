@@ -4,11 +4,15 @@ import gsap from 'gsap';
 import { createRoot, type Root } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import App from './App.tsx';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { MotionProvider } from './components/motion/MotionProvider';
 import { motionEngineTokens, motionTokens } from './lib/motion';
 import './index.css';
 
 const AdminPanel = lazy(() => import('./components/AdminPanel.tsx'));
+
+const prefersReducedMotion = () =>
+	window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function mountApp(container: HTMLElement, pathname: string): Root | null {
 	const rootElement = container.querySelector<HTMLElement>('#root');
@@ -19,15 +23,17 @@ function mountApp(container: HTMLElement, pathname: string): Root | null {
 	const root = createRoot(rootElement);
 	flushSync(() => {
 		root.render(
-			<MotionProvider>
-				{pathname.startsWith('/admin') ? (
-					<Suspense fallback={<main className="min-h-screen bg-[#111311] p-8 text-sm text-white/60">Loading admin...</main>}>
-						<AdminPanel />
-					</Suspense>
-				) : (
-					<App />
-				)}
-			</MotionProvider>,
+			<ErrorBoundary>
+				<MotionProvider>
+					{pathname.startsWith('/admin') ? (
+						<Suspense fallback={<main className="min-h-screen bg-[#111311] p-8 text-sm text-white/60">Loading admin...</main>}>
+							<AdminPanel />
+						</Suspense>
+					) : (
+						<App />
+					)}
+				</MotionProvider>
+			</ErrorBoundary>,
 		);
 	});
 	return root;
@@ -43,7 +49,7 @@ barba.init({
 			async leave({ current }) {
 				reactRoot?.unmount();
 				reactRoot = null;
-				if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+				if (prefersReducedMotion()) return;
 				await gsap.to(current.container, {
 					autoAlpha: 0,
 					yPercent: -2,
@@ -51,19 +57,21 @@ barba.init({
 					ease: motionEngineTokens.gsap.pageExit,
 				});
 			},
-			afterEnter({ next }) {
+			// Hide the incoming container the instant Barba inserts it, so the
+			// freshly mounted page never flashes before it fades in.
+			beforeEnter({ next }) {
+				if (prefersReducedMotion()) return;
+				gsap.set(next.container, { autoAlpha: 0, yPercent: 2 });
+			},
+			async enter({ next }) {
 				reactRoot = mountApp(next.container, next.url.path);
-				if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-				return gsap.fromTo(
-					next.container,
-					{ autoAlpha: 0, yPercent: 2 },
-					{
-						autoAlpha: 1,
-						yPercent: 0,
-						duration: motionTokens.duration.pageEnter,
-						ease: motionEngineTokens.gsap.pageEnter,
-					},
-				);
+				if (prefersReducedMotion()) return;
+				await gsap.to(next.container, {
+					autoAlpha: 1,
+					yPercent: 0,
+					duration: motionTokens.duration.pageEnter,
+					ease: motionEngineTokens.gsap.pageEnter,
+				});
 			},
 		},
 	],

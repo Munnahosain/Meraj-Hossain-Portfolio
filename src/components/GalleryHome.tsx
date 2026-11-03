@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { CaseStudy, TimeTheme } from '../types';
 import { FrictionScroller } from '../utils/frictionScroll';
 import type { ProjectMotionEasing } from '../lib/project-motion';
+import { ProgressiveImage } from './motion/ProgressiveImage';
 
 interface GalleryHomeProps {
   cases: CaseStudy[];
@@ -13,6 +14,10 @@ interface GalleryHomeProps {
   isTransitioning?: boolean;
   transitionSelectionKey?: string | null;
   transitionEasing?: ProjectMotionEasing;
+  /** Hold the deal-out intro until the page loader has lifted. */
+  introEnabled?: boolean;
+  /** Arrow keys step through cases while true. */
+  keyboardEnabled?: boolean;
   theme: TimeTheme;
 }
 
@@ -29,12 +34,20 @@ export interface GalleryMediaTransition {
 
 type IntroStage = 'measuring' | 'shutter' | 'dealing' | 'interactive';
 
+// The full shutter intro plays once per page load; coming back from a case
+// study only re-deals the cards, so returning never costs 2.5 seconds.
+let fullIntroPlayed = false;
+
+const pad = (value: number) => String(value).padStart(2, '0');
+
 export const GalleryHome: React.FC<GalleryHomeProps> = ({
   cases,
   onSelectCase,
   isTransitioning = false,
   transitionSelectionKey = null,
   transitionEasing = [0.76, 0, 0.24, 1],
+  introEnabled = true,
+  keyboardEnabled = true,
   theme,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -51,18 +64,20 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
 
   // Spring-based Friction Scroller with Progressive Velocity-Proportional Bounce
   // Olpo scroll = olpo bounce, beshi scroll = beshi bounce
-  const frictionScrollerRef = useRef<FrictionScroller>(
-    new FrictionScroller({
-      friction: 0.928, // Controlled, responsive deceleration
-      impulseFactor: 0.42,
-      baseNotchImpulse: 9.2, // Gentle single wheel spin travels ~120px with virtually zero squish
-      maxVelocity: 125,
-      streakTimeoutMs: 195,
-      streakRampStep: 0.28,
-      maxStreakMultiplier: 3.2,
-      spring: 'tactile',
-    })
+  const [frictionScroller] = useState(
+    () =>
+      new FrictionScroller({
+        friction: 0.928, // Controlled, responsive deceleration
+        impulseFactor: 0.42,
+        baseNotchImpulse: 9.2, // Gentle single wheel spin travels ~120px with virtually zero squish
+        maxVelocity: 125,
+        streakTimeoutMs: 195,
+        streakRampStep: 0.28,
+        maxStreakMultiplier: 3.2,
+        spring: 'tactile',
+      }),
   );
+  const frictionScrollerRef = useRef<FrictionScroller>(frictionScroller);
 
   // Position and state tracking refs
   const targetScrollRef = useRef<number>(0);
@@ -89,113 +104,256 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
 
   // Width of one full set of 6 cases
   const setBlockWidthRef = useRef<number>(0);
+  const casesLengthRef = useRef(cases.length);
+  casesLengthRef.current = cases.length;
+  const timersRef = useRef<number[]>([]);
+  const wrapTimerRef = useRef<number | null>(null);
+
+  // Timeline scrubber measurements + live DOM handles (updated without re-rendering)
+  const firstLeftRef = useRef(0);
+  const cardStepRef = useRef(0);
+  const cardWidthRef = useRef(0);
+  const lastActiveRef = useRef(-1);
+  const playheadRef = useRef<HTMLDivElement>(null);
+  const counterRef = useRef<HTMLSpanElement>(null);
+  const titleRef = useRef<HTMLSpanElement>(null);
+  const casesRef = useRef(cases);
+  casesRef.current = cases;
+
+  const later = useCallback((callback: () => void, ms: number) => {
+    timersRef.current.push(window.setTimeout(callback, ms));
+  }, []);
+  const clearTimers = useCallback(() => {
+    timersRef.current.forEach((id) => window.clearTimeout(id));
+    timersRef.current = [];
+  }, []);
+
+  // Which case is centred, and how far along the loop we are (drives the timeline).
+  const updateTimeline = useCallback(() => {
+    const el = scrollRef.current;
+    const count = casesLengthRef.current;
+    if (!el || count === 0 || cardStepRef.current <= 0) return;
+    const center = el.scrollLeft + el.clientWidth / 2;
+    const fractional = (center - firstLeftRef.current - cardWidthRef.current / 2) / cardStepRef.current;
+    const norm = ((fractional % count) + count) % count;
+    const active = Math.round(norm) % count;
+    if (playheadRef.current) playheadRef.current.style.left = `${(norm / count) * 100}%`;
+    if (active !== lastActiveRef.current) {
+      lastActiveRef.current = active;
+      if (counterRef.current) counterRef.current.textContent = `${pad(active + 1)} / ${pad(count)}`;
+      if (titleRef.current) {
+        titleRef.current.textContent = casesRef.current[active]?.title.replace(/\n/g, ' ') ?? '';
+      }
+      el.dataset.active = String(active);
+    }
+  }, []);
 
   // Measure center offsets for middle set (indices 6 to 11) relative to viewport center
   const calculateOffsets = useCallback(() => {
-    if (!scrollRef.current) return;
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+    const count = casesLengthRef.current;
     const viewportCenterX = window.innerWidth / 2;
 
     const firstCard = cardRefs.current[0];
-    const middleCard0 = cardRefs.current[cases.length];
+    const secondCard = cardRefs.current[1];
+    const middleCard0 = cardRefs.current[count];
     if (firstCard && middleCard0) {
       setBlockWidthRef.current = middleCard0.offsetLeft - firstCard.offsetLeft;
     }
+    if (firstCard) {
+      const scrollRect = scrollEl.getBoundingClientRect();
+      firstLeftRef.current = firstCard.getBoundingClientRect().left - scrollRect.left + scrollEl.scrollLeft;
+      cardWidthRef.current = firstCard.offsetWidth;
+    }
+    if (firstCard && secondCard) cardStepRef.current = secondCard.offsetLeft - firstCard.offsetLeft;
 
-    const offsets = cases.map((_, i) => {
-      const idx = cases.length + i;
-      const el = cardRefs.current[idx];
+    const offsets = Array.from({ length: count }, (_, i) => {
+      const el = cardRefs.current[count + i];
       if (!el) return 0;
       const rect = el.getBoundingClientRect();
       const cardCenterX = rect.left + rect.width / 2;
       return viewportCenterX - cardCenterX;
     });
     setCenterOffsets(offsets);
-  }, [cases]);
+    updateTimeline();
+  }, [updateTimeline]);
 
-  // Launch the 5-Image Roller Shutter + Left/Right Parting Deal Animation
-  const startDeckIntro = useCallback(() => {
-    setIntroStage('measuring');
-    setScaleProgress(0.72);
-    setShutterPositions([-105, -105, -105, -105, -105]);
-    frictionScrollerRef.current.reset();
-
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      calculateOffsets();
-      const blockWidth = setBlockWidthRef.current;
-      if (scrollRef.current && blockWidth > 0) {
-        scrollRef.current.scrollLeft = blockWidth;
-        targetScrollRef.current = blockWidth;
-        currentScrollRef.current = blockWidth;
-      }
-      setShutterPositions([0, 0, 0, 0, 0]);
-      setScaleProgress(1);
-      setIntroStage('interactive');
-      return;
-    }
-
+  const placeMiddleSet = useCallback(() => {
     if (scrollRef.current && setBlockWidthRef.current > 0) {
       scrollRef.current.scrollLeft = setBlockWidthRef.current;
       targetScrollRef.current = setBlockWidthRef.current;
       currentScrollRef.current = setBlockWidthRef.current;
     }
+  }, []);
 
-    setTimeout(() => {
-      calculateOffsets();
+  // Launch the 5-Image Roller Shutter + Left/Right Parting Deal Animation
+  const startDeckIntro = useCallback(
+    (quick: boolean) => {
+      clearTimers();
+      setIntroStage('measuring');
+      setScaleProgress(0.72);
+      setShutterPositions([-105, -105, -105, -105, -105]);
+      frictionScrollerRef.current.reset();
 
-      if (scrollRef.current && setBlockWidthRef.current > 0) {
-        scrollRef.current.scrollLeft = setBlockWidthRef.current;
-        targetScrollRef.current = setBlockWidthRef.current;
-        currentScrollRef.current = setBlockWidthRef.current;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        calculateOffsets();
+        placeMiddleSet();
+        updateTimeline();
+        setShutterPositions([0, 0, 0, 0, 0]);
+        setScaleProgress(1);
+        setIntroStage('interactive');
+        fullIntroPlayed = true;
+        return;
       }
 
-      setIntroStage('shutter');
+      placeMiddleSet();
 
-      // Drop 1: 1st shutter image rolls down from top (0ms)
-      setShutterPositions([0, -105, -105, -105, -105]);
-      setScaleProgress(0.76);
+      later(() => {
+        calculateOffsets();
+        placeMiddleSet();
+        updateTimeline();
 
-      // Drop 2: 2nd shutter image rolls down (280ms)
-      setTimeout(() => {
-        setShutterPositions([0, 0, -105, -105, -105]);
-        setScaleProgress(0.82);
-      }, 280);
-
-      // Drop 3: 3rd shutter image rolls down (560ms)
-      setTimeout(() => {
-        setShutterPositions([0, 0, 0, -105, -105]);
-        setScaleProgress(0.88);
-      }, 560);
-
-      // Drop 4: 4th shutter image rolls down (840ms)
-      setTimeout(() => {
-        setShutterPositions([0, 0, 0, 0, -105]);
-        setScaleProgress(0.94);
-      }, 840);
-
-      // Drop 5: 5th (LAST) shutter image rolls down (1120ms)
-      setTimeout(() => {
-        setShutterPositions([0, 0, 0, 0, 0]);
-        setScaleProgress(1.0);
-      }, 1120);
-
-      // Step 3: Earlier images slide left, last images slide right (1500ms)
-      setTimeout(() => {
-        setIntroStage('dealing');
-
-        // Step 4: After dealing finishes, unlock interactive infinite gallery (2550ms)
-        setTimeout(() => {
+        const finish = () => {
+          fullIntroPlayed = true;
           setIntroStage('interactive');
-        }, 1050);
-      }, 1500);
-    }, 50);
-  }, [calculateOffsets]);
+        };
 
-  // Initial trigger on mount
+        if (quick) {
+          // Returning visitor: skip the shutter, just deal the cards out.
+          setScaleProgress(1);
+          setIntroStage('dealing');
+          later(finish, 1050);
+          return;
+        }
+
+        setIntroStage('shutter');
+        setShutterPositions([0, -105, -105, -105, -105]);
+        setScaleProgress(0.76);
+        later(() => {
+          setShutterPositions([0, 0, -105, -105, -105]);
+          setScaleProgress(0.82);
+        }, 280);
+        later(() => {
+          setShutterPositions([0, 0, 0, -105, -105]);
+          setScaleProgress(0.88);
+        }, 560);
+        later(() => {
+          setShutterPositions([0, 0, 0, 0, -105]);
+          setScaleProgress(0.94);
+        }, 840);
+        later(() => {
+          setShutterPositions([0, 0, 0, 0, 0]);
+          setScaleProgress(1.0);
+        }, 1120);
+        later(() => {
+          setIntroStage('dealing');
+          later(finish, 1050);
+        }, 1500);
+      }, 50);
+    },
+    [calculateOffsets, clearTimers, later, placeMiddleSet, updateTimeline],
+  );
+
+  // Start (or restart) the intro only when the loader is gone or the set of
+  // projects actually changes. A data refresh that returns the same projects
+  // must not replay the intro halfway through.
+  const casesKey = cases.map((item) => item.id).join('|');
   useEffect(() => {
-    startDeckIntro();
+    if (!introEnabled) return;
+    startDeckIntro(fullIntroPlayed);
+    return clearTimers;
+  }, [casesKey, introEnabled, startDeckIntro, clearTimers]);
+
+  useEffect(() => {
     window.addEventListener('resize', calculateOffsets);
     return () => window.removeEventListener('resize', calculateOffsets);
-  }, [startDeckIntro, calculateOffsets]);
+  }, [calculateOffsets]);
+
+  // Keep measurements fresh if the project data changes without a restart.
+  useEffect(() => {
+    calculateOffsets();
+  }, [cases, calculateOffsets]);
+
+  // Jump to a case via the shortest route around the loop.
+  const scrollToCase = useCallback((index: number) => {
+    const el = scrollRef.current;
+    const count = casesLengthRef.current;
+    if (!el || count === 0 || cardStepRef.current <= 0) return;
+    let best = 0;
+    let bestDistance = Infinity;
+    for (let setIndex = 0; setIndex < 3; setIndex += 1) {
+      const candidate =
+        firstLeftRef.current +
+        (setIndex * count + index) * cardStepRef.current +
+        cardWidthRef.current / 2 -
+        el.clientWidth / 2;
+      const distance = Math.abs(candidate - currentScrollRef.current);
+      if (distance < bestDistance) {
+        best = candidate;
+        bestDistance = distance;
+      }
+    }
+    frictionScrollerRef.current.reset();
+    targetScrollRef.current = Math.max(0, best);
+    scheduleFrameRef.current?.();
+  }, []);
+
+  // Wrap into the middle set once scrolling settles, for input that bypasses the physics loop (touch).
+  const wrapScroll = useCallback(() => {
+    const el = scrollRef.current;
+    const setWidth = setBlockWidthRef.current;
+    if (!el || setWidth <= 0 || isDraggingRef.current) return;
+    if (currentScrollRef.current >= 2 * setWidth) {
+      currentScrollRef.current -= setWidth;
+      targetScrollRef.current -= setWidth;
+      el.scrollLeft -= setWidth;
+    } else if (currentScrollRef.current <= 0.5 * setWidth) {
+      currentScrollRef.current += setWidth;
+      targetScrollRef.current += setWidth;
+      el.scrollLeft += setWidth;
+    }
+  }, []);
+
+  const handleScroll = () => {
+    updateTimeline();
+    const el = scrollRef.current;
+    if (!el || introStage !== 'interactive' || isDraggingRef.current) return;
+    // Native (touch) scrolling moves scrollLeft without going through the physics
+    // loop; adopt the new position so the next wheel/drag doesn't snap back.
+    if (Math.abs(el.scrollLeft - currentScrollRef.current) > 2) {
+      currentScrollRef.current = el.scrollLeft;
+      targetScrollRef.current = el.scrollLeft;
+      frictionScrollerRef.current.reset();
+      if (wrapTimerRef.current !== null) window.clearTimeout(wrapTimerRef.current);
+      wrapTimerRef.current = window.setTimeout(wrapScroll, 140);
+    }
+  };
+
+  useEffect(
+    () => () => {
+      if (wrapTimerRef.current !== null) window.clearTimeout(wrapTimerRef.current);
+    },
+    [],
+  );
+
+  // Arrow keys: step one case at a time.
+  useEffect(() => {
+    if (!keyboardEnabled || introStage !== 'interactive' || isTransitioning) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest('input, textarea, select, [role="slider"]')) return;
+      const count = casesLengthRef.current;
+      if (count === 0) return;
+      event.preventDefault();
+      const direction = event.key === 'ArrowRight' ? 1 : -1;
+      const current = lastActiveRef.current < 0 ? 0 : lastActiveRef.current;
+      scrollToCase((current + direction + count) % count);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [introStage, isTransitioning, keyboardEnabled, scrollToCase]);
 
   // Infinite Loop + Friction Momentum Coasting + Spring Bounce Engine
   useEffect(() => {
@@ -239,18 +397,8 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
         trackRef.current.style.transform = `translate3d(0, 0, 0) scale(1, ${physics.dynamicScale})`;
       }
 
-      const setWidth = setBlockWidthRef.current;
-      if (setWidth > 0 && !isDraggingRef.current) {
-        if (currentScrollRef.current >= 2 * setWidth) {
-          currentScrollRef.current -= setWidth;
-          targetScrollRef.current -= setWidth;
-          scrollElement.scrollLeft -= setWidth;
-        } else if (currentScrollRef.current <= 0.5 * setWidth) {
-          currentScrollRef.current += setWidth;
-          targetScrollRef.current += setWidth;
-          scrollElement.scrollLeft += setWidth;
-        }
-      }
+      wrapScroll();
+      updateTimeline();
 
       if (physics.isMoving || isDraggingRef.current) scheduleFrame();
     }
@@ -284,7 +432,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
       if (rafId !== null) cancelAnimationFrame(rafId);
       scrollElement.removeEventListener('wheel', handleWheel);
     };
-  }, [introStage, isTransitioning]);
+  }, [introStage, isTransitioning, updateTimeline, wrapScroll]);
 
   // Mouse Drag Handlers with Fling Release Velocity
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -429,6 +577,8 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
       {/* Main Infinite Horizontal Track - Never Ends! Bottom gap matches reference image */}
       <div
         ref={scrollRef}
+        onScroll={handleScroll}
+        data-cursor="drag"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -528,6 +678,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
                 }
               }}
               role="button"
+              data-cursor="view"
               tabIndex={isIntroActive || isTransitioning ? -1 : 0}
               aria-label={`Open ${item.title.replace('\n', ' ')} case study`}
               aria-disabled={isIntroActive || isTransitioning}
@@ -590,12 +741,10 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <img
+                    <ProgressiveImage
                       src={item.coverPoster || item.coverImage}
                       alt={item.title}
-                      loading={idx < 6 ? 'eager' : 'lazy'}
-                      decoding="async"
-                      className="w-full h-full object-cover"
+                      loading={idx < 6 ? "eager" : "lazy"}
                     />
                   )}
                 </div>
@@ -605,6 +754,41 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
         })}
         </div>
       </div>
+
+      {/* Timeline scrubber: where you are in the loop. Click a tick to jump. */}
+      {cases.length > 1 && (
+        <div
+          className="pointer-events-none absolute inset-x-4 sm:inset-x-8 bottom-1.5 sm:bottom-2.5 z-20 flex items-center gap-4 font-mono text-[10px] uppercase tracking-[0.18em] transition-opacity duration-700 ease-[cubic-bezier(0.65,0,0.35,1)]"
+          style={{ color: theme.text, opacity: introStage === 'interactive' && !isTransitioning ? 0.8 : 0 }}
+        >
+          <span ref={counterRef} className="w-14 shrink-0 tabular-nums">{`01 / ${pad(cases.length)}`}</span>
+          <div className="relative h-5 flex-1">
+            <div className="absolute inset-x-0 top-1/2 h-px opacity-25" style={{ backgroundColor: theme.text }} />
+            {cases.map((item, index) => (
+              <button
+                key={item.id}
+                type="button"
+                tabIndex={-1}
+                aria-label={`Go to ${item.title.replace('\n', ' ')}`}
+                onClick={() => scrollToCase(index)}
+                className="pointer-events-auto group/tick absolute top-0 h-5 w-5 -translate-x-1/2"
+                style={{ left: `${((index + 0.5) / cases.length) * 100}%` }}
+              >
+                <span
+                  className="absolute left-1/2 top-1/2 h-2 w-px -translate-x-1/2 -translate-y-1/2 opacity-40 transition-[height,opacity] duration-300 ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/tick:h-4 group-hover/tick:opacity-100"
+                  style={{ backgroundColor: theme.text }}
+                />
+              </button>
+            ))}
+            <div
+              ref={playheadRef}
+              className="absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#18C98A] shadow-[0_0_10px_#18C98A]"
+              style={{ left: '0%' }}
+            />
+          </div>
+          <span ref={titleRef} className="hidden sm:block w-48 shrink-0 truncate text-right" />
+        </div>
+      )}
     </div>
   );
 };
