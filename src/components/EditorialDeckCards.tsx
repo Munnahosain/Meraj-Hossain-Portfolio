@@ -4,17 +4,21 @@
  */
 
 import React from 'react';
-import { motion, Variants, MotionValue } from 'framer-motion';
-import { TimeTheme } from '../types';
+import { motion, MotionValue, AnimatePresence } from 'framer-motion';
+import { ArchiveItem, MerajProfile, TimeTheme, ViewMode } from '../types';
 import { motionTokens } from '../lib/motion';
 import { ProgressiveImage } from './motion/ProgressiveImage';
+import { ArchiveView } from './ArchiveView';
+import { AboutView } from './AboutView';
 
 export type DeckCardId = 'archive' | 'about';
 
 interface EditorialDeckCardsProps {
   isOpen: boolean;
+  activeView: ViewMode;
   onClose: () => void;
   onNavigate: (view: DeckCardId) => void;
+  onCloseExpanded: () => void;
   cardWidth: number;
   cardHeight: number;
   cardTop: number;
@@ -29,6 +33,9 @@ interface EditorialDeckCardsProps {
   deckRepelX?: MotionValue<number>;
   /** Lets the parent dim the other cards while one is hovered or focused. */
   onHoverCard?: (card: DeckCardId | null) => void;
+  persona: MerajProfile;
+  archiveItems: ArchiveItem[];
+  onOpenContact: () => void;
 }
 
 /**
@@ -62,64 +69,7 @@ const SignatureIcon: React.FC<{ color?: string }> = ({ color = 'currentColor' })
   </svg>
 );
 
-const MENU_REVEAL_EASE = motionTokens.easing.menu;
-
-// Parent deck container coordinating sequential entrance with staggerChildren
-const deckContainerVariants: Variants = {
-  closed: {
-    transition: {
-      staggerChildren: 0.08,
-      staggerDirection: -1,
-      when: 'afterChildren',
-    },
-  },
-  open: {
-    transition: {
-      delayChildren: 0.08,
-      staggerChildren: 0.12,
-      staggerDirection: 1,
-    },
-  },
-};
-
-/**
- * Card fan-out. On desktop the cards sit side by side and slide in from the
- * right with a little 3D tilt. On mobile there is no room beside the front
- * card, so they stack behind it like a deck and peek out at the corner.
- * `custom` is `true` when the layout is the mobile stack.
- */
 const stackOffset = { 2: { x: 12, y: 14, scale: 0.965 }, 3: { x: 24, y: 28, scale: 0.93 } } as const;
-
-function deckCardVariants(slot: 2 | 3): Variants {
-  const stack = stackOffset[slot];
-  return {
-    closed: (mobile: boolean) => ({
-      x: mobile ? stack.x + 70 : slot === 2 ? 90 : 140,
-      y: mobile ? stack.y + 24 : slot === 2 ? 28 : 36,
-      opacity: 0,
-      rotateY: slot === 2 ? -8 : -12,
-      scale: mobile ? stack.scale - 0.04 : slot === 2 ? 0.95 : 0.93,
-      transition: {
-        duration: motionTokens.duration.navigationExit,
-        ease: MENU_REVEAL_EASE,
-      },
-    }),
-    open: (mobile: boolean) => ({
-      x: mobile ? stack.x : 0,
-      y: mobile ? stack.y : 0,
-      opacity: 1,
-      rotateY: mobile ? 0 : slot === 2 ? 0 : -1.5,
-      scale: mobile ? stack.scale : 1,
-      transition: {
-        duration: slot === 2 ? motionTokens.duration.navigation : motionTokens.duration.navigationDepth,
-        ease: MENU_REVEAL_EASE,
-      },
-    }),
-  };
-}
-
-const card2Variants = deckCardVariants(2);
-const card3Variants = deckCardVariants(3);
 
 const CardHeader: React.FC<{ theme: TimeTheme }> = ({ theme }) => (
   <div className="flex items-start justify-between w-full">
@@ -143,8 +93,10 @@ const CardHeader: React.FC<{ theme: TimeTheme }> = ({ theme }) => (
 
 export const EditorialDeckCards: React.FC<EditorialDeckCardsProps> = ({
   isOpen,
+  activeView,
   onClose,
   onNavigate,
+  onCloseExpanded,
   cardWidth,
   cardHeight,
   cardTop,
@@ -153,10 +105,19 @@ export const EditorialDeckCards: React.FC<EditorialDeckCardsProps> = ({
   card3Left,
   isDesktop,
   theme,
+  windowWidth,
+  windowHeight,
   deckRepelX,
   onHoverCard,
+  persona,
+  archiveItems,
+  onOpenContact,
 }) => {
   const mobile = !isDesktop;
+  const isArchiveExpanded = activeView === 'archive';
+  const isAboutExpanded = activeView === 'about';
+  const anyExpanded = isArchiveExpanded || isAboutExpanded;
+
   const cardStyle: React.CSSProperties = {
     backgroundColor: theme.bg,
     color: theme.text,
@@ -166,7 +127,7 @@ export const EditorialDeckCards: React.FC<EditorialDeckCardsProps> = ({
   };
 
   const open = (card: DeckCardId) => {
-    if (isOpen) onNavigate(card);
+    if (isOpen && !anyExpanded) onNavigate(card);
   };
 
   const keyActivate = (card: DeckCardId) => (event: React.KeyboardEvent) => {
@@ -178,7 +139,7 @@ export const EditorialDeckCards: React.FC<EditorialDeckCardsProps> = ({
 
   const hoverProps = (card: DeckCardId) => ({
     onPointerEnter: (event: React.PointerEvent) => {
-      if (event.pointerType === 'mouse' && isOpen) onHoverCard?.(card);
+      if (event.pointerType === 'mouse' && isOpen && !anyExpanded) onHoverCard?.(card);
     },
     onPointerLeave: () => onHoverCard?.(null),
     onFocus: () => onHoverCard?.(card),
@@ -186,132 +147,273 @@ export const EditorialDeckCards: React.FC<EditorialDeckCardsProps> = ({
   });
 
   return (
-    <motion.div
-      variants={deckContainerVariants}
-      initial="closed"
-      animate={isOpen ? 'open' : 'closed'}
+    <div
       onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget && isOpen && !anyExpanded) onClose();
       }}
-      className="fixed inset-0 z-24 [perspective:1400px]"
-      style={{ pointerEvents: isOpen ? 'auto' : 'none' }}
+      className={`fixed inset-0 [perspective:1400px] ${
+        anyExpanded ? 'z-50 pointer-events-auto' : isOpen ? 'z-24 pointer-events-auto' : 'z-0 pointer-events-none'
+      }`}
     >
       {/* ========================================================
           CARD 2: ARCHIVE
-          Outer element owns the entrance (position, tilt, fade); the inner
-          one owns the pointer "repel" so the two never fight over `x`.
+          Expands directly from Card 2's deck coordinates (card2Left, cardTop)
+          out to fullscreen, and collapses seamlessly back into that position!
           ======================================================== */}
       <motion.div
-        variants={card2Variants}
-        custom={mobile}
-        className="fixed"
+        initial={false}
+        animate={
+          isArchiveExpanded
+            ? {
+                top: 0,
+                left: 0,
+                width: windowWidth,
+                height: windowHeight,
+                opacity: 1,
+                zIndex: 50,
+                x: 0,
+                y: 0,
+                scale: 1,
+                rotateY: 0,
+              }
+            : isOpen
+            ? {
+                top: cardTop,
+                left: mobile ? card1Left : card2Left,
+                width: cardWidth,
+                height: cardHeight,
+                opacity: isAboutExpanded ? 0 : 1,
+                zIndex: 24,
+                x: mobile ? stackOffset[2].x : 0,
+                y: mobile ? stackOffset[2].y : 0,
+                scale: mobile ? stackOffset[2].scale : 1,
+                rotateY: mobile ? 0 : 0,
+              }
+            : {
+                top: cardTop,
+                left: mobile ? card1Left : card2Left,
+                width: cardWidth,
+                height: cardHeight,
+                opacity: 0,
+                zIndex: 24,
+                x: mobile ? stackOffset[2].x + 70 : 90,
+                y: mobile ? stackOffset[2].y + 24 : 28,
+                scale: mobile ? stackOffset[2].scale - 0.04 : 0.95,
+                rotateY: -8,
+              }
+        }
+        transition={{
+          duration: 0.65,
+          ease: [0.65, 0, 0.35, 1],
+        }}
+        className={`fixed transform-gpu ${
+          isArchiveExpanded
+            ? 'overflow-hidden pointer-events-auto'
+            : isOpen && !anyExpanded
+            ? 'pointer-events-auto overflow-hidden'
+            : 'pointer-events-none overflow-hidden'
+        }`}
         style={{
           transformStyle: 'preserve-3d',
-          width: `${cardWidth}px`,
-          height: `${cardHeight}px`,
-          top: `${cardTop}px`,
-          left: `${mobile ? card1Left : card2Left}px`,
-          zIndex: 24,
-          pointerEvents: isOpen ? 'auto' : 'none',
+          backgroundColor: theme.bg,
+          color: theme.text,
+          border: isArchiveExpanded ? '0px solid transparent' : `1px solid ${theme.border}`,
+          borderRadius: '0px',
+          boxShadow: 'none',
         }}
       >
-        <motion.div
-          role="button"
-          tabIndex={isOpen ? 0 : -1}
-          aria-label="Open archive"
-          aria-hidden={!isOpen}
-          data-cursor="open"
-          data-deck-card="archive"
-          onClick={() => open('archive')}
-          onKeyDown={keyActivate('archive')}
-          {...hoverProps('archive')}
-          className="group select-none flex h-full w-full flex-col justify-between overflow-hidden p-6 sm:p-7"
-          style={{ ...cardStyle, x: deckRepelX }}
-        >
-          <CardHeader theme={theme} />
+        <AnimatePresence mode="wait" initial={false}>
+          {isArchiveExpanded ? (
+            <motion.div
+              key="full-archive"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.35, ease: 'easeOut' }}
+              className="w-full h-full"
+            >
+              <ArchiveView theme={theme} items={archiveItems} onClose={onCloseExpanded} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="deck-archive"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              role="button"
+              tabIndex={isOpen && !anyExpanded ? 0 : -1}
+              aria-label="Open archive"
+              aria-hidden={!isOpen || anyExpanded}
+              data-cursor="open"
+              data-deck-card="archive"
+              onClick={() => open('archive')}
+              onKeyDown={keyActivate('archive')}
+              {...hoverProps('archive')}
+              className="group select-none flex h-full w-full flex-col justify-between overflow-hidden p-6 sm:p-7 cursor-pointer"
+              style={{ x: deckRepelX }}
+            >
+              <CardHeader theme={theme} />
 
-          <div className="mt-3.5 mb-auto">
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-sans font-light tracking-tight lowercase leading-none transition-transform duration-500 ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:translate-x-1.5">
-              archive
-            </h2>
-          </div>
+              <div className="mt-3.5 mb-auto">
+                <h2 className="text-4xl sm:text-5xl lg:text-6xl font-sans font-light tracking-tight lowercase leading-none transition-transform duration-500 ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:translate-x-1.5">
+                  archive
+                </h2>
+              </div>
 
-          <div className="w-full pt-4">
-            <div className="grid grid-cols-3 gap-2 h-[220px] sm:h-[340px] w-full overflow-hidden items-stretch">
-              {[
-                { src: '/assets/site/BESTSELLER.BwMYxazI.jpg', alt: 'Bestseller Archive' },
-                { src: '/assets/site/archive_02.Dm2AgCPJ.jpg', alt: 'Editorial Lookbook' },
-                { src: '/assets/site/COPENHAGEN_FASHION_WEEK.Cif1zX-w.jpg', alt: 'Copenhagen Fashion Week' },
-              ].map((image) => (
-                <div
-                  key={image.src}
-                  className="h-full overflow-hidden rounded-none bg-[#16181e]"
-                  style={{ border: `1px solid ${theme.border}` }}
-                >
-                  <ProgressiveImage
-                    src={image.src}
-                    alt={image.alt}
-                    className="transition-transform duration-[900ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:scale-105"
-                  />
+              <div className="w-full pt-4">
+                <div className="grid grid-cols-3 gap-2 h-[220px] sm:h-[340px] w-full overflow-hidden items-stretch">
+                  {[
+                    { src: '/assets/site/BESTSELLER.BwMYxazI.jpg', alt: 'Bestseller Archive' },
+                    { src: '/assets/site/archive_02.Dm2AgCPJ.jpg', alt: 'Editorial Lookbook' },
+                    { src: '/assets/site/COPENHAGEN_FASHION_WEEK.Cif1zX-w.jpg', alt: 'Copenhagen Fashion Week' },
+                  ].map((image) => (
+                    <div
+                      key={image.src}
+                      className="h-full overflow-hidden rounded-none bg-[#16181e]"
+                      style={{ border: `1px solid ${theme.border}` }}
+                    >
+                      <ProgressiveImage
+                        src={image.src}
+                        alt={image.alt}
+                        className="transition-transform duration-[900ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:scale-105"
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       {/* ========================================================
           CARD 3: ABOUT
+          Expands directly from Card 3's deck coordinates (card3Left, cardTop)
+          out to fullscreen, and collapses seamlessly back into that position!
           ======================================================== */}
       <motion.div
-        variants={card3Variants}
-        custom={mobile}
-        className="fixed"
+        initial={false}
+        animate={
+          isAboutExpanded
+            ? {
+                top: 0,
+                left: 0,
+                width: windowWidth,
+                height: windowHeight,
+                opacity: 1,
+                zIndex: 50,
+                x: 0,
+                y: 0,
+                scale: 1,
+                rotateY: 0,
+              }
+            : isOpen
+            ? {
+                top: cardTop,
+                left: mobile ? card1Left : card3Left,
+                width: cardWidth,
+                height: cardHeight,
+                opacity: isArchiveExpanded ? 0 : 1,
+                zIndex: 23,
+                x: mobile ? stackOffset[3].x : 0,
+                y: mobile ? stackOffset[3].y : 0,
+                scale: mobile ? stackOffset[3].scale : 1,
+                rotateY: mobile ? 0 : -1.5,
+              }
+            : {
+                top: cardTop,
+                left: mobile ? card1Left : card3Left,
+                width: cardWidth,
+                height: cardHeight,
+                opacity: 0,
+                zIndex: 23,
+                x: mobile ? stackOffset[3].x + 70 : 140,
+                y: mobile ? stackOffset[3].y + 28 : 36,
+                scale: mobile ? stackOffset[3].scale - 0.04 : 0.93,
+                rotateY: -12,
+              }
+        }
+        transition={{
+          duration: 0.65,
+          ease: [0.65, 0, 0.35, 1],
+        }}
+        className={`fixed transform-gpu ${
+          isAboutExpanded
+            ? 'overflow-y-auto no-scrollbar pointer-events-auto'
+            : isOpen && !anyExpanded
+            ? 'pointer-events-auto overflow-hidden'
+            : 'pointer-events-none overflow-hidden'
+        }`}
         style={{
           transformStyle: 'preserve-3d',
-          width: `${cardWidth}px`,
-          height: `${cardHeight}px`,
-          top: `${cardTop}px`,
-          left: `${mobile ? card1Left : card3Left}px`,
-          zIndex: 23,
-          pointerEvents: isOpen ? 'auto' : 'none',
+          backgroundColor: theme.bg,
+          color: theme.text,
+          border: isAboutExpanded ? '0px solid transparent' : `1px solid ${theme.border}`,
+          borderRadius: '0px',
+          boxShadow: 'none',
         }}
       >
-        <motion.div
-          role="button"
-          tabIndex={isOpen ? 0 : -1}
-          aria-label="Open about"
-          aria-hidden={!isOpen}
-          data-cursor="open"
-          data-deck-card="about"
-          onClick={() => open('about')}
-          onKeyDown={keyActivate('about')}
-          {...hoverProps('about')}
-          className="group select-none flex h-full w-full flex-col justify-between overflow-hidden p-6 sm:p-7"
-          style={{ ...cardStyle, x: deckRepelX }}
-        >
-          <CardHeader theme={theme} />
-
-          <div className="mt-3.5 mb-auto">
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-sans font-light tracking-tight lowercase leading-none transition-transform duration-500 ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:translate-x-1.5">
-              about
-            </h2>
-          </div>
-
-          <div className="w-full pt-4">
-            <div
-              className="h-[220px] sm:h-[340px] w-full overflow-hidden rounded-none bg-[#16181e]"
-              style={{ border: `1px solid ${theme.border}` }}
+        <AnimatePresence mode="wait" initial={false}>
+          {isAboutExpanded ? (
+            <motion.div
+              key="full-about"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.35, ease: 'easeOut' }}
+              className="w-full min-h-full"
             >
-              <ProgressiveImage
-                src="/assets/site/image-1.COdZ4MWx.jpg"
-                alt="Meraj Hossain Portrait"
-                className="object-contain object-center transition-transform duration-[900ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:scale-[1.02]"
+              <AboutView
+                persona={persona}
+                onOpenContact={onOpenContact}
+                theme={theme}
+                onClose={onCloseExpanded}
               />
-            </div>
-          </div>
-        </motion.div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="deck-about"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              role="button"
+              tabIndex={isOpen && !anyExpanded ? 0 : -1}
+              aria-label="Open about"
+              aria-hidden={!isOpen || anyExpanded}
+              data-cursor="open"
+              data-deck-card="about"
+              onClick={() => open('about')}
+              onKeyDown={keyActivate('about')}
+              {...hoverProps('about')}
+              className="group select-none flex h-full w-full flex-col justify-between overflow-hidden p-6 sm:p-7 cursor-pointer"
+              style={{ x: deckRepelX }}
+            >
+              <CardHeader theme={theme} />
+
+              <div className="mt-3.5 mb-auto">
+                <h2 className="text-4xl sm:text-5xl lg:text-6xl font-sans font-light tracking-tight lowercase leading-none transition-transform duration-500 ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:translate-x-1.5">
+                  about
+                </h2>
+              </div>
+
+              <div className="w-full pt-4">
+                <div
+                  className="h-[220px] sm:h-[340px] w-full overflow-hidden rounded-none bg-[#16181e]"
+                  style={{ border: `1px solid ${theme.border}` }}
+                >
+                  <ProgressiveImage
+                    src="/assets/site/image-1.COdZ4MWx.jpg"
+                    alt="Meraj Hossain Portrait"
+                    className="object-contain object-center transition-transform duration-[900ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:scale-[1.02]"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
-    </motion.div>
+    </div>
   );
 };

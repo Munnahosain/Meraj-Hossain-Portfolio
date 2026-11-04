@@ -16,6 +16,7 @@ interface HeaderProps {
   onNavigate: (view: 'home' | 'cases' | 'archive' | 'about') => void;
   onOpenMenu: () => void;
   onToggleMenu?: () => void;
+  onCloseView?: () => void;
   isMenuOpen?: boolean;
   onOpenContact: () => void;
   currentHour: number;
@@ -75,6 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
   onNavigate,
   onOpenMenu,
   onToggleMenu,
+  onCloseView,
   isMenuOpen = false,
   onOpenContact,
   currentHour,
@@ -417,29 +419,50 @@ export const Header: React.FC<HeaderProps> = ({
             style={{ color: navTextColor }}
             aria-label="Primary"
           >
-            <Magnetic strength={0.4}>
-              <div className="overflow-hidden">
-                <div
-                  className={`transition-transform duration-700 ease-[cubic-bezier(0.65,0,0.35,1)] ${
-                    isLoaded ? 'translate-y-0' : 'translate-y-[115%]'
-                  }`}
-                  style={{ transitionDelay: '300ms' }}
+            {/* Top Navigation:
+                - In 3-card menu deck mode: CLOSE button is REMOVED per user request ("ei khane close buttol bad daw").
+                - In full screen archive/about: Shows CLOSE ✕ to shrink back to deck.
+                - In normal home view: Shows MENU to reveal 3-card deck. */}
+            <div
+              className={`overflow-hidden transition-opacity duration-300 ${
+                isMenuOpen && activeView === 'home'
+                  ? 'opacity-0 pointer-events-none'
+                  : 'opacity-100 pointer-events-auto'
+              }`}
+            >
+              <div
+                className={`transition-transform duration-700 ease-[cubic-bezier(0.65,0,0.35,1)] ${
+                  isLoaded ? 'translate-y-0' : 'translate-y-[115%]'
+                }`}
+                style={{ transitionDelay: '300ms' }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (activeView === 'archive' || activeView === 'about') {
+                      onCloseView ? onCloseView() : onNavigate('home');
+                    } else {
+                      onToggleMenu ? onToggleMenu() : onOpenMenu();
+                    }
+                  }}
+                  aria-expanded={isMenuOpen}
+                  aria-label={
+                    activeView === 'archive' || activeView === 'about'
+                      ? 'Close view and return to deck'
+                      : isMenuOpen
+                      ? 'Close menu'
+                      : 'Open menu'
+                  }
+                  className="group/menu relative block cursor-pointer text-left select-none"
                 >
-                  <MotionButton
-                    onClick={onToggleMenu || onOpenMenu}
-                    aria-expanded={isMenuOpen}
-                    aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
-                    className="group/menu relative block cursor-pointer text-left select-none"
-                  >
-                    <RollLabel
-                      text={isMenuOpen ? 'CLOSE ✕' : 'MENU'}
-                      hoverColor={theme.isLight ? '#0B8A5A' : '#34EEA0'}
-                      height={16}
-                    />
-                  </MotionButton>
-                </div>
+                  <RollLabel
+                    text={activeView === 'archive' || activeView === 'about' ? 'CLOSE ✕' : 'MENU'}
+                    hoverColor={theme.isLight ? '#0B8A5A' : '#34EEA0'}
+                    height={16}
+                  />
+                </button>
               </div>
-            </Magnetic>
+            </div>
             <div
               inert={isMenuOpen}
               aria-hidden={isMenuOpen}
@@ -447,27 +470,26 @@ export const Header: React.FC<HeaderProps> = ({
                 isMenuOpen ? 'pointer-events-none -translate-y-1.5 opacity-0' : 'translate-y-0 opacity-100'
               }`}
             >
-              <Magnetic strength={0.4}>
-                <div className="overflow-hidden">
-                  <div
-                    className={`transition-transform duration-700 ease-[cubic-bezier(0.65,0,0.35,1)] ${
-                      isLoaded ? 'translate-y-0' : 'translate-y-[115%]'
-                    }`}
-                    style={{ transitionDelay: '380ms' }}
+              <div className="overflow-hidden">
+                <div
+                  className={`transition-transform duration-700 ease-[cubic-bezier(0.65,0,0.35,1)] ${
+                    isLoaded ? 'translate-y-0' : 'translate-y-[115%]'
+                  }`}
+                  style={{ transitionDelay: '380ms' }}
+                >
+                  <button
+                    type="button"
+                    onClick={onOpenContact}
+                    className="group/contact relative block cursor-pointer text-left select-none mt-[1px]"
                   >
-                    <MotionButton
-                      onClick={onOpenContact}
-                      className="group/contact relative block cursor-pointer text-left select-none mt-[1px]"
-                    >
-                      <RollLabel
-                        text="CONTACT"
-                        hoverColor={theme.isLight ? '#0B8A5A' : '#34EEA0'}
-                        height={16}
-                      />
-                    </MotionButton>
-                  </div>
+                    <RollLabel
+                      text="CONTACT"
+                      hoverColor={theme.isLight ? '#0B8A5A' : '#34EEA0'}
+                      height={16}
+                    />
+                  </button>
                 </div>
-              </Magnetic>
+              </div>
             </div>
           </nav>
 

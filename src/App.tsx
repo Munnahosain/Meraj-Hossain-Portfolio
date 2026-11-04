@@ -17,7 +17,6 @@ import { ArchiveView } from './components/ArchiveView';
 import { AboutView } from './components/AboutView';
 import { ContactModal } from './components/ContactModal';
 import { MotionButton, ViewTransition } from './components/motion/MotionPrimitives';
-import { Preloader } from './components/motion/Preloader';
 import { CustomCursor } from './components/motion/CustomCursor';
 import { useLenis } from './hooks/useLenis';
 import { motionTokens } from './lib/motion';
@@ -77,28 +76,14 @@ export default function App() {
   const mainRef = useRef<HTMLElement>(null);
   const [hoveredDeck, setHoveredDeck] = useState<DeckCardId | 'cases' | null>(null);
 
-  // Page loader: shown until data, fonts and first covers are ready. Skipped for reduced motion.
-  const prefersReducedAtLoad =
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const [showPreloader, setShowPreloader] = useState(!prefersReducedAtLoad);
-  const [isBooted, setIsBooted] = useState(prefersReducedAtLoad);
-  const [bootReady, setBootReady] = useState(prefersReducedAtLoad);
+  // Page loader: disabled per user request (no splash screen, numbers, or shutter animation)
+  const [showPreloader, setShowPreloader] = useState(false);
+  const [isBooted, setIsBooted] = useState(true);
+  const [bootReady, setBootReady] = useState(true);
   const [dataSettled, setDataSettled] = useState(false);
-  const seenLoader = useRef(false);
-  if (typeof window !== 'undefined' && !seenLoader.current) {
-    try {
-      seenLoader.current = window.sessionStorage.getItem('mh-booted') === '1';
-    } catch {
-      seenLoader.current = false;
-    }
-  }
+  const seenLoader = useRef(true);
   const handleReveal = useCallback(() => {
     setIsBooted(true);
-    try {
-      window.sessionStorage.setItem('mh-booted', '1');
-    } catch {
-      /* storage unavailable: loader simply plays again next time */
-    }
   }, []);
   const handleLoaderDone = useCallback(() => setShowPreloader(false), []);
 
@@ -419,30 +404,49 @@ export default function App() {
 
   const handleNavigate = (newView: 'home' | 'cases' | 'archive' | 'about') => {
     cancelProjectTransition();
+    if (newView === 'cases' || newView === 'home') {
+      if (window.location.pathname !== '/') {
+        window.history.replaceState({ portfolioView: 'home' }, '', '/');
+      }
+      setView('home');
+      setSelectedCase(null);
+      setIsMenuOpen(false);
+      document.title = 'Meraj Hossain — Motion Graphics & Visual Designer Portfolio';
+    } else {
+      setView(newView);
+      setSelectedCase(null);
+      setIsMenuOpen(true);
+      document.title = `${newView === 'archive' ? 'Archive' : 'About'} — Meraj Hossain`;
+    }
+  };
+
+  const handleCloseExpanded = useCallback(() => {
+    setView('home');
+    setIsMenuOpen(true);
     if (window.location.pathname !== '/') {
       window.history.replaceState({ portfolioView: 'home' }, '', '/');
     }
-    if (newView === 'cases') {
-      setView('home');
-    } else {
-      setView(newView);
-    }
-    setSelectedCase(null);
-    setIsMenuOpen(false);
-  };
+    document.title = 'Meraj Hossain — Motion Graphics & Visual Designer Portfolio';
+  }, []);
 
   // Keyboard escape handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (isMenuOpen) setIsMenuOpen(false);
-        else if (isContactOpen) setIsContactOpen(false);
-        else if (view === 'case-detail') handleBackToGallery();
+        if (view === 'archive' || view === 'about') {
+          handleCloseExpanded();
+        } else if (isMenuOpen) {
+          setIsMenuOpen(false);
+        } else if (isContactOpen) {
+          setIsContactOpen(false);
+        } else if (view === 'case-detail') {
+          handleBackToGallery();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isMenuOpen, isContactOpen, view]);
+  }, [isMenuOpen, isContactOpen, view, handleCloseExpanded]);
 
   // 3-Card Layout Geometry Calculations
   const isDesktop = windowSize.width >= 1024;
@@ -475,36 +479,54 @@ export default function App() {
     (progress) => windowSize.height + (cardHeight - windowSize.height) * progress,
   );
 
-  // Horizontal negative magnetic counter: mouse right = cards left, mouse left = cards right.
+  // Negative magnetic counter: mouse right = cards left, mouse left = cards right, mouse down = cards up, mouse up = cards down.
   const totalDeckX = useMotionValue(0);
   const smoothDeckX = useSpring(totalDeckX, { stiffness: 280, damping: 22, mass: 0.4 });
   const deckRepelX = useTransform([smoothDeckX, menuProgress], ([x, p]) => (x as number) * (p as number));
 
+  const totalDeckY = useMotionValue(0);
+  const smoothDeckY = useSpring(totalDeckY, { stiffness: 280, damping: 22, mass: 0.4 });
+  const deckRepelY = useTransform([smoothDeckY, menuProgress], ([y, p]) => (y as number) * (p as number));
+
   useEffect(() => {
     if (!isMenuOpen) {
       totalDeckX.set(0);
+      totalDeckY.set(0);
       return;
     }
 
     const handleMouseMove = (e: MouseEvent) => {
       const centerX = windowSize.width / 2;
+      const centerY = windowSize.height / 2;
       const normX = Math.max(-1, Math.min(1, (e.clientX - centerX) / centerX));
-      const MAGNETIC_STRENGTH = isDesktop ? 54 : 32;
-      totalDeckX.set(-normX * MAGNETIC_STRENGTH);
+      const normY = Math.max(-1, Math.min(1, (e.clientY - centerY) / centerY));
+      const MAGNETIC_STRENGTH_X = isDesktop ? 60 : 36;
+      const MAGNETIC_STRENGTH_Y = isDesktop ? 18 : 10;
+      totalDeckX.set(-normX * MAGNETIC_STRENGTH_X);
+      totalDeckY.set(-normY * MAGNETIC_STRENGTH_Y);
     };
 
     const handleMouseLeave = () => {
       totalDeckX.set(0);
+      totalDeckY.set(0);
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      const current = totalDeckX.get();
+      totalDeckX.set(Math.max(-160, Math.min(160, current - delta * 0.4)));
     };
 
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    window.addEventListener('wheel', handleWheel, { passive: true });
     document.addEventListener('mouseleave', handleMouseLeave);
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('wheel', handleWheel);
       document.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [isMenuOpen, isDesktop, windowSize.width, totalDeckX]);
+  }, [isMenuOpen, isDesktop, windowSize.width, windowSize.height, totalDeckX, totalDeckY]);
 
   // Active theme / menu colors
   const activeBg = isMenuOpen ? FIXED_MENU_DARK_GREEN : theme.bg;
@@ -577,6 +599,7 @@ export default function App() {
         persona={portfolio.profile}
         activeView={view}
         onNavigate={handleNavigate}
+        onCloseView={handleCloseExpanded}
         onOpenMenu={() => {
           cancelProjectTransition();
           setIsMenuOpen(true);
@@ -629,12 +652,13 @@ export default function App() {
         className={`fixed ${
           isMenuOpen
             ? 'group cursor-pointer select-none overflow-hidden no-scrollbar'
-            : view === 'home' || view === 'case-detail' || view === 'archive'
+            : view === 'home' || view === 'case-detail'
             ? 'overflow-hidden no-scrollbar'
-            : 'overflow-y-auto no-scrollbar'
+            : 'overflow-hidden no-scrollbar'
         }`}
         style={{
           x: deckRepelX,
+          y: deckRepelY,
           top: heroTop,
           left: heroLeft,
           width: heroWidth,
@@ -645,7 +669,8 @@ export default function App() {
           border: isMenuOpen ? `1px solid ${theme.border}` : '0px solid transparent',
           boxShadow: 'none', // Strictly no shadow on cards as requested
           zIndex: isMenuOpen ? 25 : 30, // Firmly higher than closed cards
-          opacity: 1, // Solid 1: no opacity glitch
+          opacity: view === 'archive' || view === 'about' ? 0 : 1,
+          pointerEvents: view === 'archive' || view === 'about' ? 'none' : 'auto',
         }}
         title={isMenuOpen ? 'Click to expand cases full screen' : undefined}
       >
@@ -655,7 +680,7 @@ export default function App() {
           <ViewTransition
             key={view === 'case-detail' ? selectedCase?.id || view : view}
             className={`w-full ${
-              view === 'home' || view === 'archive'
+              view === 'home'
                 ? 'h-full overflow-hidden'
                 : view === 'case-detail'
                   ? 'h-full overflow-hidden'
@@ -695,16 +720,6 @@ export default function App() {
                 onHeroImageReady={handleSharedHeroTargetReady}
               />
             )}
-
-            {view === 'archive' && <ArchiveView theme={theme} items={portfolio.archiveItems} />}
-
-            {view === 'about' && (
-              <AboutView
-                persona={portfolio.profile}
-                onOpenContact={() => setIsContactOpen(true)}
-                theme={theme}
-              />
-            )}
           </ViewTransition>
         )}
         </AnimatePresence>
@@ -734,11 +749,14 @@ export default function App() {
           CARD 2 (ARCHIVE) & CARD 3 (ABOUT)
           Smoothly slide in beside docked Card 1 using Framer Motion
           Sharing the EXACT landing page theme background (theme.bg)
+          When clicked, each card expands from its exact card coordinates!
           ======================================================== */}
       <EditorialDeckCards
         isOpen={isMenuOpen}
+        activeView={view}
         onClose={() => setIsMenuOpen(false)}
         onNavigate={handleNavigate}
+        onCloseExpanded={handleCloseExpanded}
         cardWidth={cardWidth}
         cardHeight={cardHeight}
         cardTop={cardTop}
@@ -750,7 +768,11 @@ export default function App() {
         windowWidth={windowSize.width}
         windowHeight={windowSize.height}
         deckRepelX={deckRepelX}
+        deckRepelY={deckRepelY}
         onHoverCard={setHoveredDeck}
+        persona={portfolio.profile}
+        archiveItems={portfolio.archiveItems}
+        onOpenContact={() => setIsContactOpen(true)}
       />
 
       {/* Mobile Indicator Buttons when in Menu mode */}
@@ -832,15 +854,6 @@ export default function App() {
 
       <CustomCursor />
 
-      {showPreloader && (
-        <Preloader
-          isReady={bootReady}
-          compact={seenLoader.current}
-          theme={theme}
-          onReveal={handleReveal}
-          onDone={handleLoaderDone}
-        />
-      )}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { CaseStudy, TimeTheme } from '../types';
 import { FrictionScroller } from '../utils/frictionScroll';
 import type { ProjectMotionEasing } from '../lib/project-motion';
@@ -32,10 +33,20 @@ export interface GalleryMediaTransition {
   };
 }
 
-type IntroStage = 'measuring' | 'shutter' | 'dealing' | 'interactive';
+type IntroStage = 'measuring' | 'shutter' | 'morph' | 'dealing' | 'interactive';
+
+// Drop durations and custom easings for the 4-step progressive shutter:
+// Silky cinematic curves with friction-free deceleration as requested by user
+const DROP_DURATIONS = [560, 560, 400, 320];
+const DROP_EASINGS = [
+  'cubic-bezier(0.16, 1, 0.3, 1)',
+  'cubic-bezier(0.16, 1, 0.3, 1)',
+  'cubic-bezier(0.16, 1, 0.3, 1)',
+  'cubic-bezier(0.16, 1, 0.3, 1)',
+];
 
 // The full shutter intro plays once per page load; coming back from a case
-// study only re-deals the cards, so returning never costs 2.5 seconds.
+// study only re-deals the cards, so returning never costs extra time.
 let fullIntroPlayed = false;
 
 const pad = (value: number) => String(value).padStart(2, '0');
@@ -57,7 +68,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
   const mediaRefs = useRef<(HTMLDivElement | null)[]>([]);
   const scheduleFrameRef = useRef<(() => void) | null>(null);
 
-  // Infinite Cases Array (3 sets: 18 items total for endless circular repeat)
+  // Infinite Cases Array (3 sets: endless circular repeat)
   const infiniteCases = React.useMemo(() => {
     return [...cases, ...cases, ...cases];
   }, [cases]);
@@ -93,13 +104,25 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
 
   // Deck Loading Animation States
   const [introStage, setIntroStage] = useState<IntroStage>('measuring');
-  const [scaleProgress, setScaleProgress] = useState<number>(0.72);
+  const [scaleProgress, setScaleProgress] = useState<number>(0.85);
   const [centerOffsets, setCenterOffsets] = useState<number[]>([]);
 
-  // 5 Featured Images for the shutter effect
-  const shutterFeaturedIndices = cases.slice(0, 5).map((_, index) => index);
+  // Exactly 4 Featured Images for the shutter effect ending with cases[0] (hero project)
+  const shutterFeaturedCases = React.useMemo(() => {
+    if (cases.length === 0) return [];
+    if (cases.length >= 4) {
+      return [cases[1], cases[2], cases[3], cases[0]];
+    }
+    const result: typeof cases = [];
+    for (let i = 0; i < 3; i++) {
+      result.push(cases[(i + 1) % cases.length]);
+    }
+    result.push(cases[0]);
+    return result;
+  }, [cases]);
+
   const [shutterPositions, setShutterPositions] = useState<number[]>([
-    -105, -105, -105, -105, -105,
+    -105, -105, -105, -105,
   ]);
 
   // Width of one full set of 6 cases
@@ -168,16 +191,25 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
     }
     if (firstCard && secondCard) cardStepRef.current = secondCard.offsetLeft - firstCard.offsetLeft;
 
+    const scrollRect = scrollEl.getBoundingClientRect();
     const offsets = Array.from({ length: count }, (_, i) => {
       const el = cardRefs.current[count + i];
       if (!el) return 0;
-      const rect = el.getBoundingClientRect();
-      const cardCenterX = rect.left + rect.width / 2;
+      const cardUntransformedLeft = scrollRect.left + el.offsetLeft - scrollEl.scrollLeft;
+      const cardCenterX = cardUntransformedLeft + el.offsetWidth / 2;
       return viewportCenterX - cardCenterX;
     });
     setCenterOffsets(offsets);
     updateTimeline();
   }, [updateTimeline]);
+
+  const rafIdRef = useRef<number | null>(null);
+  const cancelRafSchedule = useCallback(() => {
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+  }, []);
 
   const placeMiddleSet = useCallback(() => {
     if (scrollRef.current && setBlockWidthRef.current > 0) {
@@ -187,20 +219,21 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
     }
   }, []);
 
-  // Launch the 5-Image Roller Shutter + Left/Right Parting Deal Animation
+  // Launch the 4-Image Progressive Roller Shutter driven by a requestAnimationFrame loop
   const startDeckIntro = useCallback(
     (quick: boolean) => {
       clearTimers();
+      cancelRafSchedule();
       setIntroStage('measuring');
-      setScaleProgress(0.72);
-      setShutterPositions([-105, -105, -105, -105, -105]);
+      setScaleProgress(0.85);
+      setShutterPositions([-105, -105, -105, -105]);
       frictionScrollerRef.current.reset();
 
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         calculateOffsets();
         placeMiddleSet();
         updateTimeline();
-        setShutterPositions([0, 0, 0, 0, 0]);
+        setShutterPositions([0, 0, 0, 0]);
         setScaleProgress(1);
         setIntroStage('interactive');
         fullIntroPlayed = true;
@@ -209,50 +242,99 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
 
       placeMiddleSet();
 
-      later(() => {
-        calculateOffsets();
-        placeMiddleSet();
-        updateTimeline();
+      // Precision timeline scheduled using continuous requestAnimationFrame loop (locked to 60fps/120fps)
+      let startTime: number | null = null;
+      const schedule = [
+        {
+          time: 40,
+          action: () => {
+            calculateOffsets();
+            placeMiddleSet();
+            updateTimeline();
+          },
+        },
+        {
+          time: 60,
+          action: () => {
+            if (quick) {
+              setScaleProgress(1);
+              setIntroStage('dealing');
+              return;
+            }
+            // Shutter Drop 1: Slow, graceful drop (550ms)
+            setIntroStage('shutter');
+            setShutterPositions([0, -105, -105, -105]);
+            setScaleProgress(0.88);
+          },
+        },
+        {
+          time: 610,
+          action: () => {
+            if (quick) return;
+            // Shutter Drop 2: Slow, graceful drop (550ms)
+            setShutterPositions([0, 0, -105, -105]);
+            setScaleProgress(0.92);
+          },
+        },
+        {
+          time: 1160,
+          action: () => {
+            if (quick) return;
+            // Shutter Drop 3: Accelerating drop (380ms)
+            setShutterPositions([0, 0, 0, -105]);
+            setScaleProgress(0.96);
+          },
+        },
+        {
+          time: 1540,
+          action: () => {
+            if (quick) return;
+            // Shutter Drop 4: Final hero image lands crisp (300ms)
+            setShutterPositions([0, 0, 0, 0]);
+            setScaleProgress(1.0);
+          },
+        },
+        {
+          time: 1990,
+          action: () => {
+            if (quick) {
+              fullIntroPlayed = true;
+              setIntroStage('interactive');
+              return;
+            }
+            // Smooth Glide: Morph card smoothly translates directly into the target track card
+            setIntroStage('morph');
+          },
+        },
+        {
+          time: 2840,
+          action: () => {
+            fullIntroPlayed = true;
+            setIntroStage('interactive');
+          },
+        },
+      ];
 
-        const finish = () => {
-          fullIntroPlayed = true;
-          setIntroStage('interactive');
-        };
+      let nextIndex = 0;
+      const frameLoop = (timestamp: number) => {
+        if (!startTime) startTime = timestamp;
+        const elapsed = timestamp - startTime;
 
-        if (quick) {
-          // Returning visitor: skip the shutter, just deal the cards out.
-          setScaleProgress(1);
-          setIntroStage('dealing');
-          later(finish, 1050);
-          return;
+        while (nextIndex < schedule.length && elapsed >= schedule[nextIndex].time) {
+          schedule[nextIndex].action();
+          nextIndex++;
         }
 
-        setIntroStage('shutter');
-        setShutterPositions([0, -105, -105, -105, -105]);
-        setScaleProgress(0.76);
-        later(() => {
-          setShutterPositions([0, 0, -105, -105, -105]);
-          setScaleProgress(0.82);
-        }, 280);
-        later(() => {
-          setShutterPositions([0, 0, 0, -105, -105]);
-          setScaleProgress(0.88);
-        }, 560);
-        later(() => {
-          setShutterPositions([0, 0, 0, 0, -105]);
-          setScaleProgress(0.94);
-        }, 840);
-        later(() => {
-          setShutterPositions([0, 0, 0, 0, 0]);
-          setScaleProgress(1.0);
-        }, 1120);
-        later(() => {
-          setIntroStage('dealing');
-          later(finish, 1050);
-        }, 1500);
-      }, 50);
+        if (nextIndex < schedule.length) {
+          rafIdRef.current = requestAnimationFrame(frameLoop);
+        } else {
+          rafIdRef.current = null;
+        }
+      };
+
+      rafIdRef.current = requestAnimationFrame(frameLoop);
     },
-    [calculateOffsets, clearTimers, later, placeMiddleSet, updateTimeline],
+    [calculateOffsets, clearTimers, cancelRafSchedule, placeMiddleSet, updateTimeline],
   );
 
   // Start (or restart) the intro only when the loader is gone or the set of
@@ -262,8 +344,11 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
   useEffect(() => {
     if (!introEnabled) return;
     startDeckIntro(fullIntroPlayed);
-    return clearTimers;
-  }, [casesKey, introEnabled, startDeckIntro, clearTimers]);
+    return () => {
+      clearTimers();
+      cancelRafSchedule();
+    };
+  }, [casesKey, introEnabled, startDeckIntro, clearTimers, cancelRafSchedule]);
 
   useEffect(() => {
     window.addEventListener('resize', calculateOffsets);
@@ -524,55 +609,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
         color: theme.text,
       }}
     >
-      {/* Central Shop Roller Shutter Drop Overlay during Shutter Phase (5 Images) */}
-      {introStage === 'shutter' && (
-        <div className="absolute inset-0 pointer-events-none z-30 flex items-center justify-center p-6 animate-in fade-in duration-200">
-          <div
-            className="relative w-[78vw] sm:w-[48vw] md:w-[35vw] lg:w-[26vw] max-w-[480px] h-[74vh] sm:h-[77vh] md:h-[78vh] overflow-hidden border border-[#18C98A]/25 transition-transform duration-500 ease-out"
-            style={{
-              backgroundColor: theme.surface,
-              transform: `scale(${scaleProgress})`,
-            }}
-          >
-            {shutterFeaturedIndices.map((caseIdx, stepIdx) => {
-              const item = cases[caseIdx];
-              if (!item) return null;
-              const yPos = shutterPositions[stepIdx];
 
-              return (
-                <div
-                  key={caseIdx}
-                  className="absolute inset-0 w-full h-full will-change-transform"
-                  style={{
-                    transform: `translate3d(0, ${yPos}%, 0)`,
-                    transition: 'transform 420ms cubic-bezier(0.65, 0, 0.35, 1)',
-                    zIndex: stepIdx + 1,
-                  }}
-                >
-                  {/* Subtle Shutter Slat Grooves */}
-                  <div
-                    className="absolute inset-0 pointer-events-none opacity-15 z-10"
-                    style={{
-                      backgroundImage:
-                        'repeating-linear-gradient(180deg, rgba(255,255,255,0.12) 0px, rgba(255,255,255,0.12) 1px, transparent 1px, transparent 14px)',
-                    }}
-                  />
-
-                  {/* Clean Cover Image */}
-                  <img
-                    src={item.coverPoster || item.coverImage}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                  />
-
-                  {/* Leading Bottom Shutter Blade Edge with #18C98A glow */}
-                  <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#18C98A] shadow-[0_0_12px_#18C98A] z-20" />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Main Infinite Horizontal Track - Never Ends! Bottom gap matches reference image */}
       <div
@@ -583,6 +620,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        style={{ willChange: 'transform, opacity' }}
         className={`w-full no-scrollbar px-4 sm:px-8 pt-2 sm:pt-3 items-stretch h-[75vh] sm:h-[78vh] md:h-[79vh] ${
           introStage === 'interactive'
             ? isTransitioning
@@ -594,7 +632,12 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
         <div
           ref={trackRef}
           className="flex gap-2.5 sm:gap-3 items-stretch h-full transform-gpu"
-          style={{ willChange: 'transform', transformOrigin: 'center bottom' }}
+          style={{
+            willChange: 'transform, opacity',
+            transformOrigin: 'center bottom',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+          }}
         >
         {cases.length === 0 && (
           <div className="grid h-full w-full place-items-center px-6 text-center font-mono text-xs uppercase tracking-widest opacity-60">
@@ -611,6 +654,7 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
           // Middle set offset for intro animation
           const isMiddleSet = setIndex === 1;
           const offsetX = isMiddleSet ? centerOffsets[itemIndexInSet] || 0 : 0;
+          const isHeroCard = isMiddleSet && itemIndexInSet === 0;
           const selectionKey = `${item.id}-${idx}`;
           const isSelectedCard = selectionKey === transitionSelectionKey;
 
@@ -619,29 +663,54 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
           const fanAngle = (itemIndexInSet - 2.5) * 4.2;
 
           // Compute Dynamic Transform Style based on Stage:
-          let cardTransform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
+          let cardTransform = 'translate3d(0, 0, 0)';
           let cardOpacity = 1;
           let cardZIndex = 1;
           let cardTransition = 'none';
 
-          if (introStage === 'measuring' || introStage === 'shutter') {
-            if (isMiddleSet) {
-              cardTransform = `translate3d(${offsetX}px, 0, 0) scale(${scaleProgress}) rotate(${fanAngle * 0.15}deg)`;
-              cardOpacity = 0;
-              cardZIndex = 5;
+          if (introStage === 'measuring') {
+            if (isHeroCard) {
+              cardTransform = `translate3d(${centerOffsets[0] || 0}px, 0, 0)`;
+            }
+            cardOpacity = 0;
+            cardTransition = 'none';
+          } else if (introStage === 'shutter') {
+            if (isHeroCard) {
+              // The hero card is centered in the viewport and acts as the shutter canvas
+              cardTransform = `translate3d(${centerOffsets[0] || 0}px, 0, 0)`;
+              cardOpacity = 1;
+              cardZIndex = 25;
             } else {
+              cardTransform = isMiddleSet ? `translate3d(${offsetX}px, 0, 0)` : 'translate3d(0, 0, 0)';
               cardOpacity = 0;
+              cardZIndex = 1;
             }
             cardTransition = 'none';
-          } else if (introStage === 'dealing') {
-            cardTransform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
-            cardOpacity = 1;
-            cardZIndex = 5;
-            const delay = Math.abs(itemIndexInSet - (isLeftGroup ? 2 : 3)) * 75;
-            cardTransition = `transform 980ms cubic-bezier(0.65, 0, 0.35, 1) ${delay}ms, opacity 700ms cubic-bezier(0.65, 0, 0.35, 1) ${delay}ms`;
+          } else if (introStage === 'morph' || introStage === 'dealing') {
+            if (isHeroCard) {
+              // The 4th shutter card ITSELF glides directly into the 1st portfolio card position!
+              cardTransform = 'translate3d(0, 0, 0)';
+              cardOpacity = 1;
+              cardZIndex = 25;
+              cardTransition = 'transform 850ms cubic-bezier(0.16, 1, 0.3, 1) 220ms';
+            } else {
+              // Brandon Yasin deck deal sequence: right card deals first, then left, then center
+              cardTransform = 'translate3d(0, 0, 0)';
+              cardOpacity = 1;
+              cardZIndex = 5;
+              let dealDelay = 300;
+              if (itemIndexInSet === 1) {
+                dealDelay = 0; // Right card deals first
+              } else if (itemIndexInSet === cases.length - 1 || itemIndexInSet === 2) {
+                dealDelay = 140; // Left card deals second
+              } else {
+                dealDelay = Math.min(itemIndexInSet * 90 + 200, 520);
+              }
+              cardTransition = `transform 850ms cubic-bezier(0.16, 1, 0.3, 1) ${dealDelay}ms, opacity 650ms cubic-bezier(0.16, 1, 0.3, 1) ${dealDelay}ms`;
+            }
           } else {
             // Interactive state: physical spring engine directly updates vertical transforms at 60/120fps with zero CSS lag
-            cardTransform = 'translate3d(0, 0, 0) scale(1, 1)';
+            cardTransform = 'translate3d(0, 0, 0)';
             cardOpacity = 1;
             cardZIndex = 1;
             cardTransition = 'none';
@@ -693,6 +762,8 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
                   ? `clip-path 700ms cubic-bezier(${transitionEasing.join(', ')}) ${Math.min(itemIndexInSet * 20, 100)}ms`
                   : cardTransition,
                 willChange: isTransitioning ? 'clip-path' : 'transform, opacity',
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden',
               }}
               className="group relative flex-shrink-0 w-[78vw] sm:w-[48vw] md:w-[35vw] lg:w-[26vw] max-w-[480px] h-full flex flex-col justify-between cursor-pointer transform-gpu select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#18C98A]"
             >
@@ -728,7 +799,60 @@ export const GalleryHome: React.FC<GalleryHomeProps> = ({
                   className={`relative w-full flex-1 overflow-hidden bg-[#16181e] transform-gpu transition-all duration-300 ${
                     isHovered && !isIntroActive ? 'ring-1 ring-[#18C98A]/35' : ''
                   }`}
+                  style={{ willChange: 'transform, opacity' }}
                 >
+                  {/* Shutter Blades running directly inside the 1st Hero Card */}
+                  {isHeroCard && (introStage === 'shutter' || introStage === 'morph') && (
+                    <div className="absolute inset-0 z-20 pointer-events-none">
+                      {shutterFeaturedCases.map((shutterItem, stepIdx) => {
+                        if (!shutterItem) return null;
+                        const yPos = shutterPositions[stepIdx];
+                        const duration = DROP_DURATIONS[stepIdx] || 400;
+                        const easing = DROP_EASINGS[stepIdx] || 'cubic-bezier(0.22, 1, 0.36, 1)';
+
+                        return (
+                          <div
+                            key={`shutter-blade-${stepIdx}`}
+                            className="absolute inset-0 w-full h-full transform-gpu"
+                            style={{
+                              transform: `translate3d(0, ${yPos}%, 0)`,
+                              transition: `transform ${duration}ms ${easing}`,
+                              zIndex: stepIdx + 1,
+                              willChange: 'transform, opacity',
+                              backfaceVisibility: 'hidden',
+                              WebkitBackfaceVisibility: 'hidden',
+                            }}
+                          >
+                            {/* Subtle Shutter Slat Grooves */}
+                            <div
+                              className="absolute inset-0 pointer-events-none z-10 transition-opacity duration-400"
+                              style={{
+                                opacity: introStage === 'morph' ? 0 : 0.15,
+                                backgroundImage:
+                                  'repeating-linear-gradient(180deg, rgba(255,255,255,0.12) 0px, rgba(255,255,255,0.12) 1px, transparent 1px, transparent 14px)',
+                              }}
+                            />
+
+                            {/* Clean Cover Image */}
+                            <img
+                              src={shutterItem.coverPoster || shutterItem.coverImage}
+                              alt={shutterItem.title}
+                              className="w-full h-full object-cover"
+                            />
+
+                            {/* Leading Bottom Shutter Blade Edge with #18C98A glow */}
+                            <div
+                              className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#18C98A] shadow-[0_0_12px_#18C98A] z-20 transition-opacity duration-300"
+                              style={{
+                                opacity: introStage === 'morph' ? 0 : 1,
+                              }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   {item.coverVideo ? (
                     <video
                       src={item.coverVideo}

@@ -7,21 +7,37 @@ interface AboutViewProps {
   persona: MerajProfile;
   onOpenContact: () => void;
   theme: TimeTheme;
+  onClose?: () => void;
 }
 
 export const AboutView: React.FC<AboutViewProps> = ({
   persona,
   onOpenContact,
   theme,
+  onClose,
 }) => {
   return (
     <div
-      className="w-full min-h-screen pt-28 sm:pt-36 pb-24 transition-colors duration-700 overflow-x-hidden"
+      className="relative w-full min-h-screen pt-28 sm:pt-36 pb-24 transition-colors duration-700 overflow-x-hidden"
       style={{
         backgroundColor: theme.bg,
         color: theme.text,
       }}
     >
+      {/* Top Close Button for returning to 3-card deck */}
+      {onClose && (
+        <button
+          onClick={onClose}
+          type="button"
+          aria-label="Close about and return to deck"
+          className="fixed top-4 right-4 sm:top-5 sm:right-8 z-50 flex items-center gap-2 font-mono text-[11px] sm:text-[12px] tracking-[0.16em] uppercase hover:opacity-75 transition-opacity cursor-pointer px-3 py-1.5 border border-current bg-transparent select-none"
+          style={{ color: theme.text }}
+          title="Close About (Esc)"
+        >
+          <span>CLOSE</span>
+          <span className="text-[10px] leading-none">✕</span>
+        </button>
+      )}
       <div className="max-w-[1720px] mx-auto px-6 sm:px-12">
         {/* Massive Headline Statement */}
         <FadeUp

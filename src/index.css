@@ -180,12 +180,9 @@ html.admin-scroll body {
 }
 
 /* ------------------------------------------------------------------ */
-/* Custom cursor: only hide the native pointer where we replace it     */
+/* Cursor: standard native pointer used across the site               */
 /* ------------------------------------------------------------------ */
-html.has-custom-cursor [data-cursor],
-html.has-custom-cursor [data-cursor] * {
-  cursor: none !important;
-}
+
 
 /* ------------------------------------------------------------------ */
 /* Menu deck: hovering one card dims the others                        */

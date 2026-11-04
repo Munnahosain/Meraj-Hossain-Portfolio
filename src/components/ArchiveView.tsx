@@ -8,6 +8,7 @@ import { FrictionScroller } from '../utils/frictionScroll';
 interface ArchiveViewProps {
   theme: TimeTheme;
   items?: ArchiveItem[];
+  onClose?: () => void;
 }
 
 // Intrinsic ratios for archive media
@@ -20,7 +21,11 @@ const DEFAULT_RATIOS: Record<string, number> = {
   'arch-6': 1.0, // Chrome 30 installation (square)
 };
 
-export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE_ITEMS }) => {
+export const ArchiveView: React.FC<ArchiveViewProps> = ({
+  theme,
+  items = ARCHIVE_ITEMS,
+  onClose,
+}) => {
   // Use what the admin published; only fall back to the built-in set when there is nothing.
   // Short lists are repeated so the looping track is always wider than the viewport.
   const archiveItems = React.useMemo(() => {
@@ -375,6 +380,21 @@ export const ArchiveView: React.FC<ArchiveViewProps> = ({ theme, items = ARCHIVE
         color: theme.text,
       }}
     >
+      {/* Top Close Button for returning to 3-card deck */}
+      {onClose && (
+        <button
+          onClick={onClose}
+          type="button"
+          aria-label="Close archive and return to deck"
+          className="fixed top-4 right-4 sm:top-5 sm:right-8 z-50 flex items-center gap-2 font-mono text-[11px] sm:text-[12px] tracking-[0.16em] uppercase hover:opacity-75 transition-opacity cursor-pointer px-3 py-1.5 border border-current bg-transparent select-none"
+          style={{ color: theme.text }}
+          title="Close Archive (Esc)"
+        >
+          <span>CLOSE</span>
+          <span className="text-[10px] leading-none">✕</span>
+        </button>
+      )}
+
       {/* ========================================================
           TITLE ROW (Exact match to Brandon Yasin reference image)
           - Left column: Giant lowercase "archive"
